@@ -79,40 +79,53 @@ Search order for `common/`: `$BACKINTIME_COMMON`,
 `~/.local/share/backintime-gnome/common`, `/usr/share/backintime/common`,
 `/usr/local/share/backintime/common`, and `../backintime/common` (development).
 
-## Features (milestone 1)
+## Features
 
-- **Main window**: real snapshot list grouped by age (Today/Yesterday/This
-  week/Older) with a "Now" entry; browser for the content of each snapshot or
-  the current system, with breadcrumbs, up-level and search.
-- **Changes only**: compares the selected snapshot with the previous one
-  (New/Modified badges).
+The interface is built around two questions: *is everything protected right
+now?* and *what did my files look like three days ago?*. The design name for
+that layout is **Rewind**; the package and the repository keep the
+`backintime-gnome` name.
+
+- **Present mode**: status card with the last and next snapshot, number of
+  watched folders, points in time, free space on the destination and the
+  retention setting. A ring turns amber when the last snapshot failed.
+- **Time mode**: the window switches to a dark theme, shows the date of the
+  point you are visiting and marks the entries that changed or disappeared in
+  the next snapshot. The timeline at the bottom moves between points, has a
+  play button to walk the history and "Back to the present".
+- **Browser**: grid (default) or list, breadcrumbs, search, change badges and a
+  floating action bar with restore, compare and stop copying.
 - **Take snapshot**: runs `Snapshots.backup(force=True)` in a thread with a
   progress dialog that reads `takeSnapshotMessage()`; toast on completion and
-  list reload. Ctrl+S.
+  timeline reload. Ctrl+S.
 - **Restore**: dialog with original location or another folder, `.backup.YYYYMMDD`
   copy, `--update` and removal of new files; calls the real
   `Snapshots.restore()`. Ctrl+R.
 - **Delete snapshot**: destructive confirmation + `Snapshots.remove()`.
 - **Log**: viewer for `takesnapshot_N.log` with Info/Warning/Error filter.
 - **Compare**: built-in unified diff between the file in the snapshot and the
-  previous one (double click on a file while browsing a snapshot).
-- **Profiles**: header bar selector (switches the real `currentProfile`) and a
-  *Manage profiles* window with the six pages of the Qt client:
-  General (Local/SSH/encrypted mode, destination, SSH, cron/udev schedule),
-  Include and Exclude (editable lists with a real file chooser),
-  Auto-remove (age + smart removal), Options and Advanced.
-  Everything writes through the `config.Config` setters and `cfg.save()`.
-- Light/dark theme, F9 for the sidebar, shortcuts (Ctrl+, Ctrl+S Ctrl+R Ctrl+Q).
+  previous one (double click on a file while browsing a point in time).
+- **Settings sheet**: watched folders, frequency, failure notifications,
+  destination and retention on top; excludes, SSH, smart removal, rsync
+  options, log level and profiles folded into expanders. The complete *Manage
+  profiles* window (encryption modes, udev, keys, custom schedules) stays one
+  click away, so no option is lost.
+- **First-run wizard**: folders, frequency, destination, summary and the first
+  backup with live progress.
+- Light/dark theme follows the desktop in present mode; time mode is always
+  dark. Shortcuts: Ctrl+, Ctrl+S Ctrl+R Ctrl+Q, Left/Right to move between
+  points and Escape to go back to the present.
 
 ## Screenshots
 
 ![Main window](capturas/ventana-principal.png)
 
-![Preferences](capturas/preferencias.png)
+![Time travel](capturas/viaje-en-el-tiempo.png)
+
+![Settings](capturas/ajustes.png)
 
 ## Roadmap
 
-- First-run wizard (restore the config from an old backup).
 - Diff view with a configurable external tool (`meld`).
 - Real progress bar during restore.
 - Meson/Flatpak packaging and translations (reuse `common/po`).

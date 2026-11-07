@@ -17,9 +17,15 @@ class BackInTimeApp(Adw.Application):
                          flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
         self.backend = Backend()
         self._add_action('quit', lambda *_: self.quit(), ['<Control>q'])
-        self._add_action('preferences', self._preferences, ['<Control>comma'])
+        self._add_action('preferences', lambda *_: self._win('open_settings'),
+                         ['<Control>comma'])
+        self._add_action('advanced-preferences', self._advanced_preferences)
         self._add_action('about', self._about)
         self._add_action('shortcuts', self._shortcuts)
+        self._add_action('toggle-theme', lambda *_: self._win('_toggle_dark'))
+        self._add_action('first-run', lambda *_: self._win('open_wizard'))
+        self._add_action('delete-snapshot',
+                         lambda *_: self._win('delete_current_snapshot'))
         self._add_action('take-snapshot', lambda *_: self._win('take_snapshot'),
                          ['<Control>s'])
         self._add_action('restore', lambda *_: self._win('restore_selection'),
@@ -46,13 +52,16 @@ class BackInTimeApp(Adw.Application):
         win.present()
 
     def _preferences(self, *_):
+        self._win('open_settings')
+
+    def _advanced_preferences(self, *_):
         from bitgnome.prefs import PreferencesWindow
         PreferencesWindow(self).present()
 
     def _about(self, *_):
         dialog = Adw.AboutWindow(
             transient_for=self.get_active_window(),
-            application_name='Back In Time',
+            application_name='Rewind',
             application_icon='camera-photo-symbolic',
             version=__version__,
             developer_name='Equipo de Back In Time · front GNOME',
@@ -83,12 +92,16 @@ class BackInTimeApp(Adw.Application):
               <property name="accelerator">&lt;Control&gt;r</property>
             </object></child>
             <child><object class="GtkShortcutsShortcut">
-              <property name="title">Gestionar perfiles</property>
+              <property name="title">Ajustes</property>
               <property name="accelerator">&lt;Control&gt;comma</property>
             </object></child>
             <child><object class="GtkShortcutsShortcut">
-              <property name="title">Mostrar instantáneas</property>
-              <property name="accelerator">F9</property>
+              <property name="title">Punto anterior / siguiente</property>
+              <property name="accelerator">Left / Right</property>
+            </object></child>
+            <child><object class="GtkShortcutsShortcut">
+              <property name="title">Volver al presente</property>
+              <property name="accelerator">Escape</property>
             </object></child>
             <child><object class="GtkShortcutsShortcut">
               <property name="title">Salir</property>

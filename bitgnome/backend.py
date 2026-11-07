@@ -25,12 +25,14 @@ mount = None
 tools = None
 logger = None
 bitbase = None
+bitbase_module = None   # raw module in both 1.x and 2.x (TimeUnit lives here)
 
 
 def _locate_common():
     """Find and import Back In Time's ``common`` package."""
     global _LOCATED, _IMPORT_ERROR
     global config, snapshots, snapshotlog, mount, tools, logger, bitbase
+    global bitbase_module
 
     if _LOCATED:
         return
@@ -69,6 +71,7 @@ def _locate_common():
         except ImportError:
             bitbase = None
         else:
+            bitbase_module = _bitbase
             # 1.x has bitbase too, but without the CLI globals dict
             if getattr(_bitbase, 'context', None) is None or \
                     getattr(_bitbase, 'DEFAULT_CONFIG_FILE_PATH', None) is None:
