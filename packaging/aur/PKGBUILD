@@ -1,0 +1,27 @@
+# Maintainer: gnacho <hnacho@proton.me>
+
+pkgname=backintime-gnome
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Native GNOME (GTK4 + libadwaita) frontend for Back In Time"
+arch=(any)
+url="https://github.com/gnacho/backintime-gnome"
+license=(GPL-2.0-or-later)
+depends=(backintime-cli gtk4 libadwaita python-gobject)
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('01f31b303b761d6fbd4d517d1b48e0810b5b2aef2b51818b0f341cf8f28bae6b')
+
+package() {
+  cd "$pkgname-$pkgver"
+
+  install -dm755 "$pkgdir/usr/lib/$pkgname"
+  cp -a bitgnome "$pkgdir/usr/lib/$pkgname/"
+  find "$pkgdir/usr/lib/$pkgname" -name '__pycache__' -prune -exec rm -rf {} +
+
+  install -Dm755 backintime-gnome "$pkgdir/usr/bin/backintime-gnome"
+  install -Dm644 com.github.bitteam.BackInTimeGNOME.desktop \
+    "$pkgdir/usr/share/applications/com.github.bitteam.BackInTimeGNOME.desktop"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  python -m compileall -q -d "/usr/lib/$pkgname" "$pkgdir/usr/lib/$pkgname"
+}
