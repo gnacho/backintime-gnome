@@ -441,6 +441,9 @@ class MainWindow(Adw.ApplicationWindow):
     def _maybe_wizard(self):
         if self.backend.error or self.cfg is None:
             return False
+        if getattr(self.app, 'force_wizard', False):
+            self.open_wizard()
+            return False
         try:
             first_run = not self.cfg.include() or \
                 not self.backend.destination_path()

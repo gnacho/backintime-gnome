@@ -118,5 +118,26 @@ class BackInTimeApp(Adw.Application):
         win.present()
 
 
+USAGE = """Usage: backintime-gnome [OPTION]
+
+Options:
+  --first-run   Open the first-run wizard even if the profile is configured
+  --help        Show this help and exit
+"""
+
+
 def main():
-    return BackInTimeApp().run(sys.argv)
+    argv = list(sys.argv)
+    flags = argv[1:]
+    if '--help' in flags or '-h' in flags:
+        print(USAGE, end='')
+        return 0
+
+    force_wizard = '--first-run' in flags
+    # Back In Time's own argument parser reads sys.argv while the config is
+    # loaded, so GUI flags must be gone before the app is built.
+    sys.argv = [argv[0]] + [flag for flag in flags if flag != '--first-run']
+
+    app = BackInTimeApp()
+    app.force_wizard = force_wizard
+    return app.run(sys.argv)

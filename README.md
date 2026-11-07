@@ -69,6 +69,10 @@ It installs `/usr/bin/backintime-gnome` and the *Back In Time (GNOME)* menu entr
 ./backintime-gnome
 ```
 
+`--first-run` opens the wizard even when the profile already has folders and a
+destination. `--help` prints the launcher options. The wizard also opens by
+itself when the profile has no folders or no destination yet.
+
 If the engine is not installed in the standard path:
 
 ```bash
