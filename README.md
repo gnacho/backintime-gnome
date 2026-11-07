@@ -1,4 +1,4 @@
-# Back In Time — front GNOME (GTK4 + libadwaita)
+# Back In Time - front GNOME (GTK4 + libadwaita)
 
 Frontend GNOME nativo para [Back In Time](https://github.com/bit-team/backintime).
 No reimplementa nada del motor: importa `common/` del propio Back In Time y usa
@@ -11,6 +11,20 @@ está a medio refactorizar y no arranca sin configuración previa).
 - Python 3.11+ con PyGObject (`python3-gi`)
 - GTK 4.8+ y libadwaita 1.2+ (`gir1.2-gtk-4.0`, `libadwaita-1-0`, `gir1.2-adw-1`)
 - `backintime-common` instalado (recomendado), o un checkout del repo
+
+## Instalación (Arch Linux)
+
+El paquete vive en `packaging/aur` y depende de `backintime-cli` (AUR), que
+aporta `common/` sin arrastrar la interfaz Qt6.
+
+```bash
+git clone https://github.com/gnacho/backintime-gnome
+cd backintime-gnome/packaging/aur
+paru -S --asdeps backintime-cli
+makepkg -si
+```
+
+Instala `/usr/bin/backintime-gnome` y la entrada de menú *Back In Time (GNOME)*.
 
 ## Ejecutar
 
@@ -52,6 +66,12 @@ Rutas donde busca `common/`, en orden: `$BACKINTIME_COMMON`,
   Autoeliminar (antigüedad + eliminación inteligente), Opciones y Avanzado.
   Todo escribe con los setters de `config.Config` y `cfg.save()`.
 - Tema claro/oscuro, F9 para el lateral, atajos (Ctrl+, Ctrl+S Ctrl+R Ctrl+Q).
+
+## Capturas
+
+![Ventana principal](capturas/ventana-principal.png)
+
+![Preferencias](capturas/preferencias.png)
 
 ## Pendiente (próximos hitos)
 
