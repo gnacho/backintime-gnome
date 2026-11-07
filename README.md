@@ -103,7 +103,9 @@ that layout is **Rewind**; the package and the repository keep the
   progress dialog that reads `takeSnapshotMessage()`. **Parar la copia** kills
   the rsync child; the core marks the partial snapshot as failed, so the window
   discards it (nothing is kept). **Seguir en segundo plano** closes the dialog
-  and keeps working, with a toast when it finishes. Ctrl+S.
+  and keeps working, with a toast when it finishes. Closing the window or
+  pressing Ctrl+Q during a backup asks first: wait until it finishes, stop it
+  and quit, or cancel the close. Ctrl+S.
 - **Restore**: dialog with original location or another folder, `.backup.YYYYMMDD`
   copy, `--update` and removal of new files; calls the real
   `Snapshots.restore()`. Ctrl+R.

@@ -16,7 +16,7 @@ class BackInTimeApp(Adw.Application):
         super().__init__(application_id=APP_ID,
                          flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
         self.backend = Backend()
-        self._add_action('quit', lambda *_: self.quit(), ['<Control>q'])
+        self._add_action('quit', self._quit, ['<Control>q'])
         self._add_action('preferences', lambda *_: self._win('open_settings'),
                          ['<Control>comma'])
         self._add_action('advanced-preferences', self._advanced_preferences)
@@ -33,6 +33,13 @@ class BackInTimeApp(Adw.Application):
         self._add_action('restore-to', lambda *_: self._win('restore_selection', True))
         self._add_action('log-view', lambda *_: self._win('show_log'))
         self._add_action('diff', lambda *_: self._win('show_diff'))
+
+    def _quit(self, *_):
+        win = self.get_active_window()
+        if win is not None:
+            win.close()
+        else:
+            self.quit()
 
     def _win(self, method, *args):
         win = self.get_active_window()

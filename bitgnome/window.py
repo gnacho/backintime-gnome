@@ -68,12 +68,16 @@ class MainWindow(Adw.ApplicationWindow):
         self.view = 'grid'
         self.selected = None    # (name, is_dir)
         self._snap_worker_running = False
+        self._quit_when_done = False
+        self._request_stop = None
+        self._close_dialog = None
         self._playing = False
         self._play_source = None
 
         self._load_css()
         self._build_ui()
         self._build_shortcuts()
+        self.connect('close-request', self._on_close_request)
 
         if self.backend.error:
             self._show_backend_error(self.backend.error)
@@ -1072,6 +1076,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         stop_btn.connect('clicked', stop_clicked)
         background_btn.connect('clicked', to_background)
+        self._request_stop = stop_clicked
         dialog.bit_stop_btn = stop_btn
         dialog.bit_background_btn = background_btn
 
@@ -1087,9 +1092,13 @@ class MainWindow(Adw.ApplicationWindow):
 
         def done(error_message, error):
             self._snap_worker_running = False
+            self._request_stop = None
             self.snap_btn.set_sensitive(True)
             self.snap_btn.set_label('Crear copia ahora')
             dialog.close()
+            if self._close_dialog is not None:
+                self._close_dialog.destroy()
+                self._close_dialog = None
             fresh = self.backend.list_snapshots()
             created = len(fresh) > self._snapshots_before_take
             if state['stopped'] and created:
@@ -1114,8 +1123,49 @@ class MainWindow(Adw.ApplicationWindow):
                 self.toast('Punto en el tiempo creado', 'Ver ahora',
                            lambda: self.set_snapshot(None))
             self.reload_snapshots()
+            if self._quit_when_done:
+                GLib.idle_add(self._close_now)
 
         Worker(self.backend.take_snapshot, done)
+
+    def _on_close_request(self, *_):
+        if not self._snap_worker_running:
+            return False
+        if self._close_dialog is not None:
+            return True
+        dialog = Adw.MessageDialog(
+            transient_for=self, modal=True,
+            heading='Hay una copia en curso',
+            body='Si sales ahora, la copia se quedará a medias.')
+        dialog.add_response('cancel', 'Cancelar')
+        dialog.add_response('wait', 'Esperar')
+        dialog.add_response('stop', 'Detener y salir')
+        dialog.set_response_appearance('stop',
+                                       Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.set_default_response('wait')
+        dialog.set_close_response('cancel')
+        dialog.connect('response', self._on_close_response)
+        self._close_dialog = dialog
+        dialog.present()
+        return True
+
+    def _on_close_response(self, dialog, response):
+        self._close_dialog = None
+        dialog.destroy()
+        if response == 'cancel':
+            return
+        if response == 'stop' and self._request_stop is not None:
+            self._request_stop()
+        self._quit_when_done = True
+        self.toast('Se cerrará al terminar la copia' if response == 'wait'
+                   else 'Deteniendo la copia y saliendo…')
+        if not self._snap_worker_running:
+            GLib.idle_add(self._close_now)
+
+    def _close_now(self):
+        self._quit_when_done = False
+        self.close()
+        return False
 
     def restore_selection(self, other_location=False):
         sid = self._current_sid()
