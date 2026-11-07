@@ -1,21 +1,22 @@
-# Back In Time - front GNOME (GTK4 + libadwaita)
+# Back In Time - GNOME frontend (GTK4 + libadwaita)
 
-Frontend GNOME nativo para [Back In Time](https://github.com/bit-team/backintime).
-No reimplementa nada del motor: importa `common/` del propio Back In Time y usa
-`config.Config`, `snapshots.Snapshots` y `snapshotlog.SnapshotLog` exactamente
-igual que el cliente Qt. Probado contra **Back In Time 1.6.2** (la rama `dev` 2.0
-está a medio refactorizar y no arranca sin configuración previa).
+Native GNOME frontend for [Back In Time](https://github.com/bit-team/backintime).
+It does not reimplement the engine: it imports `common/` from Back In Time and
+drives `config.Config`, `snapshots.Snapshots` and `snapshotlog.SnapshotLog`
+exactly like the Qt client does. Tested against **Back In Time 1.6.2** (the
+`dev` 2.0 branch is halfway through a refactor and does not start without prior
+configuration).
 
-## Requisitos
+## Requirements
 
-- Python 3.11+ con PyGObject (`python3-gi`)
-- GTK 4.8+ y libadwaita 1.2+ (`gir1.2-gtk-4.0`, `libadwaita-1-0`, `gir1.2-adw-1`)
-- `backintime-common` instalado (recomendado), o un checkout del repo
+- Python 3.11+ with PyGObject (`python3-gi`)
+- GTK 4.8+ and libadwaita 1.2+ (`gir1.2-gtk-4.0`, `libadwaita-1-0`, `gir1.2-adw-1`)
+- `backintime-common` installed (recommended), or a checkout of the repo
 
-## Instalación (Arch Linux)
+## Install (Arch Linux)
 
-El paquete vive en `packaging/aur` y depende de `backintime-cli` (AUR), que
-aporta `common/` sin arrastrar la interfaz Qt6.
+The package definition lives in `packaging/aur` and depends on `backintime-cli`
+(AUR), which provides `common/` without pulling in the Qt6 interface.
 
 ```bash
 git clone https://github.com/gnacho/backintime-gnome
@@ -24,65 +25,65 @@ paru -S --asdeps backintime-cli
 makepkg -si
 ```
 
-Instala `/usr/bin/backintime-gnome` y la entrada de menú *Back In Time (GNOME)*.
+It installs `/usr/bin/backintime-gnome` and the *Back In Time (GNOME)* menu entry.
 
-## Ejecutar
+## Run
 
 ```bash
 ./backintime-gnome
 ```
 
-Si el núcleo no está instalado en la ruta estándar:
+If the engine is not installed in the standard path:
 
 ```bash
-BACKINTIME_COMMON=/ruta/a/backintime/common ./backintime-gnome
+BACKINTIME_COMMON=/path/to/backintime/common ./backintime-gnome
 ```
 
-Rutas donde busca `common/`, en orden: `$BACKINTIME_COMMON`,
+Search order for `common/`: `$BACKINTIME_COMMON`,
 `~/.local/share/backintime-gnome/common`, `/usr/share/backintime/common`,
-`/usr/local/share/backintime/common`, y `../backintime/common` (desarrollo).
+`/usr/local/share/backintime/common`, and `../backintime/common` (development).
 
-## Funcionalidad (hito 1)
+## Features (milestone 1)
 
-- **Ventana principal**: lista de instantáneas reales agrupada (Hoy/Ayer/Esta
-  semana/Más antiguas) con entrada «Ahora»; explorador del contenido de cada
-  instantánea o del sistema actual, con migas de pan, subir nivel y búsqueda.
-- **Solo cambios**: compara la instantánea seleccionada con la anterior
-  (badges Nuevo/Modificado).
-- **Tomar instantánea**: ejecuta `Snapshots.backup(force=True)` en un hilo con
-  diálogo de progreso que lee `takeSnapshotMessage()`; toast al terminar y
-  recarga de la lista. Ctrl+S.
-- **Restaurar**: diálogo con ubicación original u otra carpeta, copia
-  `.backup.YYYYMMDD`, `--update` y borrado de archivos nuevos; llama a
-  `Snapshots.restore()` real. Ctrl+R.
-- **Eliminar instantánea**: confirmación destructiva + `Snapshots.remove()`.
-- **Registro**: visor del `takesnapshot_N.log` con filtro Info/Avisos/Errores.
-- **Comparar**: diff unificado interno entre el archivo en la instantánea y la
-  anterior (doble clic en un archivo viendo una instantánea).
-- **Perfiles**: selector en la header bar (cambia `currentProfile` real) y
-  ventana *Gestionar perfiles* con las 6 páginas del cliente Qt:
-  General (modo Local/SSH/cifrados, destino, SSH, programación cron/udev),
-  Incluir y Excluir (listas editables con diálogo de archivos real),
-  Autoeliminar (antigüedad + eliminación inteligente), Opciones y Avanzado.
-  Todo escribe con los setters de `config.Config` y `cfg.save()`.
-- Tema claro/oscuro, F9 para el lateral, atajos (Ctrl+, Ctrl+S Ctrl+R Ctrl+Q).
+- **Main window**: real snapshot list grouped by age (Today/Yesterday/This
+  week/Older) with a "Now" entry; browser for the content of each snapshot or
+  the current system, with breadcrumbs, up-level and search.
+- **Changes only**: compares the selected snapshot with the previous one
+  (New/Modified badges).
+- **Take snapshot**: runs `Snapshots.backup(force=True)` in a thread with a
+  progress dialog that reads `takeSnapshotMessage()`; toast on completion and
+  list reload. Ctrl+S.
+- **Restore**: dialog with original location or another folder, `.backup.YYYYMMDD`
+  copy, `--update` and removal of new files; calls the real
+  `Snapshots.restore()`. Ctrl+R.
+- **Delete snapshot**: destructive confirmation + `Snapshots.remove()`.
+- **Log**: viewer for `takesnapshot_N.log` with Info/Warning/Error filter.
+- **Compare**: built-in unified diff between the file in the snapshot and the
+  previous one (double click on a file while browsing a snapshot).
+- **Profiles**: header bar selector (switches the real `currentProfile`) and a
+  *Manage profiles* window with the six pages of the Qt client:
+  General (Local/SSH/encrypted mode, destination, SSH, cron/udev schedule),
+  Include and Exclude (editable lists with a real file chooser),
+  Auto-remove (age + smart removal), Options and Advanced.
+  Everything writes through the `config.Config` setters and `cfg.save()`.
+- Light/dark theme, F9 for the sidebar, shortcuts (Ctrl+, Ctrl+S Ctrl+R Ctrl+Q).
 
-## Capturas
+## Screenshots
 
-![Ventana principal](capturas/ventana-principal.png)
+![Main window](capturas/ventana-principal.png)
 
-![Preferencias](capturas/preferencias.png)
+![Preferences](capturas/preferencias.png)
 
-## Pendiente (próximos hitos)
+## Roadmap
 
-- Asistente de primer arranque (restaurar config desde copia antigua).
-- Vista de diff con herramienta externa configurable (`meld`).
-- Barra de progreso real durante la restauración.
-- Empaquetado Meson/Flatpak y traducciones (reusar `common/po`).
+- First-run wizard (restore the config from an old backup).
+- Diff view with a configurable external tool (`meld`).
+- Real progress bar during restore.
+- Meson/Flatpak packaging and translations (reuse `common/po`).
 
-## Notas
+## Notes
 
-- Baseline **GTK 4.8 / libadwaita 1.2** (Debian 12): no usa `AdwDialog`,
-  `AdwToolbarView`, `AdwAlertDialog` ni `AdwSpinRow` (requieren GTK 4.10 /
-  Adw 1.4+). Migración trivial cuando se suba el baseline.
-- Licencia: GPL-2.0+ (igual que Back In Time).
+- **GTK 4.8 / libadwaita 1.2** baseline (Debian 12): it does not use
+  `AdwDialog`, `AdwToolbarView`, `AdwAlertDialog` or `AdwSpinRow` (those need
+  GTK 4.10 / Adw 1.4+). Migration is trivial once the baseline moves up.
+- License: GPL-2.0+ (same as Back In Time).
