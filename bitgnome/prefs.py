@@ -10,8 +10,17 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Adw, Gtk  # noqa: E402
 
-_MODES = ['local', 'ssh', 'local_encfs', 'ssh_encfs']
-_MODE_LABELS = ['Local', 'SSH', 'Local cifrado (encfs)', 'SSH cifrado (encfs)']
+from . import backend as _backend  # noqa: E402
+
+_MODES, _MODE_LABELS = _backend.snapshot_modes()
+
+
+def _mode_index(mode):
+    """Index in the mode list, appending unknown modes instead of losing them."""
+    if mode and mode not in _MODES:
+        _MODES.append(mode)
+        _MODE_LABELS.append(mode)
+    return _MODES.index(mode) if mode in _MODES else 0
 
 
 class PreferencesWindow(Adw.PreferencesWindow):
@@ -97,8 +106,7 @@ class PreferencesWindow(Adw.PreferencesWindow):
         mode_row = Adw.ComboRow(title='Modo de instantáneas',
                                 subtitle='Dónde se guardan las copias')
         mode_row.set_model(Gtk.StringList.new(_MODE_LABELS))
-        mode_row.set_selected(_MODES.index(current_mode)
-                              if current_mode in _MODES else 0)
+        mode_row.set_selected(_mode_index(current_mode))
         mode_row.connect('notify::selected', self._on_mode_changed)
         mode_group.add(mode_row)
         self.mode_row = mode_row

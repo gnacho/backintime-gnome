@@ -5,8 +5,11 @@ reimplemented: we import ``common/`` from an installed Back In Time (or a
 checkout pointed by ``BACKINTIME_COMMON``) and drive ``config.Config``,
 ``snapshots.Snapshots`` and friends exactly like the Qt GUI does.
 
-Tested against Back In Time 1.6.2.
+Works with Back In Time 1.6.x (EncFS modes) and 2.0.x (Gocryptfs modes,
+mount manager). The differences are detected at runtime.
 """
+import contextlib
+import inspect
 import os
 import sys
 import threading
@@ -62,10 +65,25 @@ def _locate_common():
         config, snapshots, snapshotlog = _config, _snapshots, _snapshotlog
         mount, tools, logger = _mount, _tools, _logger
         try:
-            import bitbase as _bitbase    # 2.x only
-            bitbase = _bitbase
+            import bitbase as _bitbase
         except ImportError:
             bitbase = None
+        else:
+            # 1.x has bitbase too, but without the CLI globals dict
+            if getattr(_bitbase, 'context', None) is None or \
+                    getattr(_bitbase, 'DEFAULT_CONFIG_FILE_PATH', None) is None:
+                bitbase = None
+            else:
+                bitbase = _bitbase
+                # 2.0 keeps CLI globals in bitbase.context, normally filled
+                # by Bit's own argument parser. Fill what Config.save() needs.
+                if bitbase.context.get('--config') is None:
+                    bitbase.context['--config'] = \
+                        bitbase.DEFAULT_CONFIG_FILE_PATH
+                if bitbase.context.get('--quiet') is None:
+                    bitbase.context['--quiet'] = True
+                bitbase.context['--config'].parent.mkdir(parents=True,
+                                                         exist_ok=True)
     except Exception as exc:              # noqa: BLE001
         _IMPORT_ERROR = f'Error importando el núcleo de Back In Time: {exc}'
 
@@ -89,6 +107,46 @@ def common_path():
     return None
 
 
+def bit_version():
+    """Version string of the loaded core (``2.0.0-rc2``), or None."""
+    path = common_path()
+    if not path:
+        return None
+    for base in (path, os.path.dirname(path)):
+        try:
+            with open(os.path.join(base, 'VERSION'), encoding='utf-8') as fh:
+                version = fh.read().strip()
+            if version:
+                return version
+        except OSError:
+            continue
+    return None
+
+
+def supports_encfs():
+    """True on 1.x cores, where the EncFS modes still exist."""
+    return config is not None and hasattr(config.Config, 'localEncfsPath')
+
+
+def snapshot_modes():
+    """(mode ids, labels) offered by the loaded core."""
+    if supports_encfs():
+        return (['local', 'ssh', 'local_encfs', 'ssh_encfs'],
+                ['Local', 'SSH', 'Local cifrado (encfs)',
+                 'SSH cifrado (encfs)'])
+    return (['local', 'ssh', 'local_gocryptfs', 'ssh_gocryptfs'],
+            ['Local', 'SSH', 'Local cifrado (gocryptfs)',
+             'SSH cifrado (gocryptfs)'])
+
+
+def _list_snapshots_needs_mount_path():
+    try:
+        params = inspect.signature(snapshots.listSnapshots).parameters
+    except (TypeError, ValueError):
+        return False
+    return 'mounted_path' in params
+
+
 class Backend:
     """Holds the Config instance and serialises long operations.
 
@@ -106,8 +164,33 @@ class Backend:
             return
         try:
             self.cfg = config.Config()
+            self._load_config()
+        except SystemExit as exc:         # cli.get_config_and_select_profile
+            self.error = f'Config no válida (exit {exc.code})'
         except Exception as exc:          # noqa: BLE001
             self.error = str(exc)
+
+    def _load_config(self):
+        """Load the config the same way Bit's own CLI does.
+
+        2.0 needs an explicit Konfig load (it also migrates old EncFS
+        profiles and fixes enum values). 1.6.x loads itself in Config().
+        """
+        loader = None
+        if bitbase is not None:
+            try:
+                import cli as _cli
+                loader = getattr(_cli, 'get_config_and_select_profile', None)
+            except Exception:             # noqa: BLE001
+                loader = None
+        if loader is not None:
+            loader(config_path=bitbase.context['--config'], pid_or_name=None)
+            self.cfg = config.Config()
+            return
+        if not self.cfg.profiles():
+            pid = self.cfg.addProfile('Main profile')
+            self.cfg.setCurrentProfile(pid)
+            self.cfg.save()
 
     # -- profiles ------------------------------------------------------
     def profiles(self):
@@ -128,14 +211,52 @@ class Backend:
     def set_current_profile(self, pid):
         self.cfg.setCurrentProfile(pid)
 
+    @staticmethod
+    def _clean_path(path):
+        """Empty or relative '.' destinations mean 'not configured yet'."""
+        if path is None:
+            return None
+        path = str(path).strip()
+        return None if path in ('', '.') else path
+
+    def destination_path(self, pid=None):
+        """Backup destination of a profile, whatever the core version."""
+        try:
+            getter = getattr(self.cfg, 'get_backup_destination_path', None)
+            if getter is not None:
+                return self._clean_path(getter(pid))
+        except Exception:                 # noqa: BLE001
+            pass
+        try:
+            return self._clean_path(self.cfg.snapshotsFullPath(pid))
+        except Exception:                 # noqa: BLE001
+            return None
+
     def profile_summary(self, pid=None):
         try:
             mode = self.cfg.snapshotsMode(pid)
-            path = (self.cfg.snapshotsFullPath(pid)
-                    if mode == 'local' else self.cfg.sshSnapshotsPath(pid))
-            return mode, path
+            if str(mode).startswith('local'):
+                path = self.destination_path(pid)
+            else:
+                path = self._clean_path(self.cfg.sshSnapshotsPath(pid))
+            return mode, path or 'sin configurar'
         except Exception:                 # noqa: BLE001
             return '?', '?'
+
+    @contextlib.contextmanager
+    def mounted(self):
+        """Mount the destination when the core requires it (2.0+).
+
+        1.6.x has no mount manager, so this is a no-op there. Yields the
+        path where the destination is mounted, or None.
+        """
+        manager_cls = getattr(mount, 'MountManager', None) if mount else None
+        if manager_cls is None:
+            yield None
+            return
+        manager = manager_cls.create(self.cfg)
+        with manager.mounted():
+            yield manager.path
 
     # -- snapshots ------------------------------------------------------
     def list_snapshots(self):
@@ -143,8 +264,11 @@ class Backend:
         if not self.cfg:
             return []
         try:
-            return list(snapshots.listSnapshots(self.cfg, includeNewSnapshot=False,
-                                                reverse=True))
+            kwargs = {'includeNewSnapshot': False, 'reverse': True}
+            with self.mounted() as mounted_path:
+                if mounted_path is not None:
+                    kwargs['mounted_path'] = mounted_path
+                return list(snapshots.listSnapshots(self.cfg, **kwargs))
         except Exception as exc:          # noqa: BLE001
             logger.debug(f'listSnapshots failed: {exc}')
             return []
@@ -162,14 +286,16 @@ class Backend:
 
     def delete_snapshot(self, sid):
         sn = snapshots.Snapshots(self.cfg)
-        sn.remove(sid)
+        with self.mounted():
+            sn.remove(sid)
 
     # -- long operations (call from worker thread) ----------------------
     def take_snapshot(self):
         """Run a backup. Returns error string or None."""
         sn = snapshots.Snapshots(self.cfg)
-        ret_error = sn.backup(force=True)
-        msg = sn.takeSnapshotMessage()
+        with self.mounted():
+            ret_error = sn.backup(force=True)
+            msg = sn.takeSnapshotMessage()
         return None if not ret_error else (msg[1] if msg else 'Error desconocido')
 
     def take_snapshot_message(self):
@@ -181,22 +307,24 @@ class Backend:
     def restore(self, sid, paths, restore_to='', delete=False,
                 backup=True, only_new=False):
         sn = snapshots.Snapshots(self.cfg)
-        sn.restore(sid, paths, restore_to=restore_to, delete=delete,
-                   backup=backup, only_new=only_new)
+        with self.mounted():
+            sn.restore(sid, paths, restore_to=restore_to, delete=delete,
+                       backup=backup, only_new=only_new)
 
     def snapshot_log(self):
         """Yield log lines for the current profile."""
         log = snapshotlog.SnapshotLog(self.cfg)
         try:
-            yield from log.get()
+            with self.mounted():
+                yield from log.get()
         except Exception:                 # noqa: BLE001
             return
 
     def free_space(self):
         try:
             from diskusage import get_free_space
-            p = self.cfg.snapshotsFullPath()
-            if os.path.isdir(p):
+            p = self.destination_path()
+            if p and os.path.isdir(p):
                 usage = os.statvfs(p)
                 return usage.f_bavail * usage.f_frsize, usage.f_blocks * usage.f_frsize
         except Exception:                 # noqa: BLE001
