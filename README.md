@@ -27,24 +27,41 @@ from older versions. Gocryptfs profiles need the `gocryptfs` binary installed.
 
 ## Install (Arch Linux)
 
-The package definition lives in `packaging/aur` and depends on `backintime-cli`
-(AUR), which provides `common/` without pulling in the Qt6 interface.
+The frontend package lives in `packaging/aur` and depends on `backintime-cli`,
+which provides the `common/` engine without the Qt6 interface. Three ways to get
+that engine.
+
+**1. This repository, 2.0 series** (the AUR only ships 1.6.x today):
 
 ```bash
 git clone https://github.com/gnacho/backintime-gnome
-cd backintime-gnome/packaging/aur
-paru -S --asdeps backintime-cli
+cd backintime-gnome/packaging/backintime-cli-2.0
+makepkg -si
+cd ../aur
 makepkg -si
 ```
 
-It installs `/usr/bin/backintime-gnome` and the *Back In Time (GNOME)* menu entry.
+The core package is `backintime-cli-2.0` (2.0.0-rc2, built from the upstream
+tag). It declares `provides`, `conflicts` and `replaces` for `backintime-cli`, so
+it satisfies the frontend dependency and swaps out the stable package.
 
-`backintime-cli` in the AUR still ships 1.6.2. To run against 2.0.x, download the
-release candidate and point the frontend at its `common/` directory:
+**2. AUR, 1.6.x stable**:
+
+```bash
+paru -S --asdeps backintime-cli
+makepkg -si        # from packaging/aur
+```
+
+**3. AUR git branch**: `paru -S --asdeps backintime-cli-git` follows `dev` and
+also provides and conflicts with `backintime-cli`.
+
+Without installing anything, point the frontend at a checkout of the core:
 
 ```bash
 BACKINTIME_COMMON=/path/to/backintime-2.0.0-rc2/common backintime-gnome
 ```
+
+It installs `/usr/bin/backintime-gnome` and the *Back In Time (GNOME)* menu entry.
 
 ## Run
 
