@@ -100,8 +100,10 @@ that layout is **Rewind**; the package and the repository keep the
 - **Browser**: grid (default) or list, breadcrumbs, search, change badges and a
   floating action bar with restore, compare and stop copying.
 - **Take snapshot**: runs `Snapshots.backup(force=True)` in a thread with a
-  progress dialog that reads `takeSnapshotMessage()`; toast on completion and
-  timeline reload. Ctrl+S.
+  progress dialog that reads `takeSnapshotMessage()`. **Parar la copia** kills
+  the rsync child; the core marks the partial snapshot as failed, so the window
+  discards it (nothing is kept). **Seguir en segundo plano** closes the dialog
+  and keeps working, with a toast when it finishes. Ctrl+S.
 - **Restore**: dialog with original location or another folder, `.backup.YYYYMMDD`
   copy, `--update` and removal of new files; calls the real
   `Snapshots.restore()`. Ctrl+R.

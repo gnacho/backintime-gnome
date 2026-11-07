@@ -301,6 +301,48 @@ class Backend:
             msg = sn.takeSnapshotMessage()
         return None if not ret_error else (msg[1] if msg else 'Error desconocido')
 
+    @staticmethod
+    def descendant_pids(root=None):
+        """PIDs below ``root`` (default: this process), deepest last."""
+        root = root or os.getpid()
+        children = {}
+        for entry in os.listdir('/proc'):
+            if not entry.isdigit():
+                continue
+            try:
+                with open(f'/proc/{entry}/stat', encoding='utf-8') as fh:
+                    fields = fh.read().rsplit(')', 1)[1].split()
+                ppid = int(fields[1])
+            except (OSError, IndexError, ValueError):
+                continue
+            children.setdefault(ppid, []).append(int(entry))
+        out, stack = [], [root]
+        while stack:
+            parent = stack.pop()
+            for child in children.get(parent, []):
+                out.append(child)
+                stack.append(child)
+        return out
+
+    def stop_snapshot(self, sig=None):
+        """Kill the rsync (and helpers) spawned by an in-process backup.
+
+        The core reacts to a non-zero rsync exit by removing the incomplete
+        snapshot, so this is a clean cancel. Returns the signalled PIDs.
+        """
+        import signal
+        sig = sig or signal.SIGTERM
+        signalled = []
+        for pid in self.descendant_pids():
+            try:
+                os.kill(pid, sig)
+                signalled.append(pid)
+            except ProcessLookupError:
+                continue
+            except PermissionError:
+                continue
+        return signalled
+
     def take_snapshot_message(self):
         try:
             return snapshots.Snapshots(self.cfg).takeSnapshotMessage()

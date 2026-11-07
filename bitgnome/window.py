@@ -562,6 +562,8 @@ class MainWindow(Adw.ApplicationWindow):
             self.section_hint.set_text('Doble clic para entrar')
             self.tl_label.set_text('Ahora')
             self.tl_sub.set_text('Estado actual de tus archivos')
+        if self._snap_worker_running:
+            self.title_sub.set_text('Creando copia…')
         self._update_actionbar()
 
     # ---------------------------------------------------------------- hero
@@ -1003,11 +1005,14 @@ class MainWindow(Adw.ApplicationWindow):
             self.toast('Núcleo no disponible')
             return
         self._snap_worker_running = True
+        self._snapshots_before_take = len(self.chrono)
         self.snap_btn.set_sensitive(False)
+        self.snap_btn.set_label('Copiando…')
+        self.title_sub.set_text('Creando copia…')
 
         dialog = Adw.Window(transient_for=self, modal=True,
                             title='Tomando instantánea',
-                            default_width=420, resizable=False)
+                            default_width=440, resizable=False)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         box.set_margin_top(24)
         box.set_margin_bottom(20)
@@ -1017,22 +1022,65 @@ class MainWindow(Adw.ApplicationWindow):
                               height_request=32, halign=Gtk.Align.CENTER)
         box.append(spinner)
         stage = Gtk.Label(label='Iniciando rsync…')
+        stage.set_wrap(True)
+        stage.set_max_width_chars(52)
         box.append(stage)
-        cancel = Gtk.Button(label='Cancelar', halign=Gtk.Align.CENTER)
-        box.append(cancel)
+
+        buttons = Gtk.Box(spacing=8, halign=Gtk.Align.CENTER)
+        stop_btn = Gtk.Button(label='Parar la copia')
+        stop_btn.add_css_class('rw-danger')
+        background_btn = Gtk.Button(label='Seguir en segundo plano')
+        background_btn.add_css_class('rw-soft')
+        buttons.append(stop_btn)
+        buttons.append(background_btn)
+        box.append(buttons)
         dialog.set_content(box)
         dialog.present()
+        self._snapshot_dialog = dialog
 
-        cancelled = {'value': False}
-        cancel.connect('clicked', lambda *_: (
-            dialog.close(), cancelled.update(value=True)))
+        state = {'stopped': False, 'background': False, 'attempts': 0}
+
+        def escalate():
+            if self._snap_worker_running and state['stopped']:
+                import signal
+                self.backend.stop_snapshot(signal.SIGKILL)
+            return False
+
+        def attempt_stop():
+            if not state['stopped'] or not self._snap_worker_running:
+                return False
+            pids = self.backend.stop_snapshot()
+            if not pids and state['attempts'] < 4:
+                state['attempts'] += 1
+                GLib.timeout_add(1000, attempt_stop)
+            return False
+
+        def stop_clicked(*_):
+            if state['stopped']:
+                return
+            state['stopped'] = True
+            stage.set_text('Deteniendo la copia…')
+            stop_btn.set_sensitive(False)
+            background_btn.set_sensitive(False)
+            attempt_stop()
+            GLib.timeout_add_seconds(6, escalate)
+
+        def to_background(*_):
+            state['background'] = True
+            dialog.close()
+            self.toast('La copia sigue en segundo plano. Te aviso al terminar')
+
+        stop_btn.connect('clicked', stop_clicked)
+        background_btn.connect('clicked', to_background)
+        dialog.bit_stop_btn = stop_btn
+        dialog.bit_background_btn = background_btn
 
         def poll():
-            if cancelled['value']:
+            if state['background'] or state['stopped']:
                 return False
             message = self.backend.take_snapshot_message()
             if message and message[1]:
-                stage.set_text(message[1][-120:])
+                stage.set_text(message[1][-140:])
             return True
 
         GLib.timeout_add(300, poll)
@@ -1040,8 +1088,25 @@ class MainWindow(Adw.ApplicationWindow):
         def done(error_message, error):
             self._snap_worker_running = False
             self.snap_btn.set_sensitive(True)
+            self.snap_btn.set_label('Crear copia ahora')
             dialog.close()
-            if error:
+            fresh = self.backend.list_snapshots()
+            created = len(fresh) > self._snapshots_before_take
+            if state['stopped'] and created:
+                # rsync returns 20 on SIGTERM and the core keeps the partial
+                # snapshot marked as failed. Discard it: the user asked to stop.
+                newest = fresh[0]
+                if getattr(newest, 'failed', False):
+                    try:
+                        self.backend.delete_snapshot(newest)
+                        created = False
+                    except Exception as exc:  # noqa: BLE001
+                        self.toast(f'No se pudo descartar la copia parcial: {exc}')
+            if state['stopped'] and not created:
+                self.toast('Copia detenida. No se guardó nada')
+            elif state['stopped'] and created:
+                self.toast('La copia terminó antes de poder detenerla')
+            elif error:
                 self.toast(f'Error en la instantánea: {error}')
             elif error_message:
                 self.toast(f'Instantánea terminada con errores: {error_message}')
