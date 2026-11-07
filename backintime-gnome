@@ -3,7 +3,11 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_here = os.path.dirname(os.path.abspath(__file__))
+for _base in (_here, '/usr/lib/backintime-gnome'):
+    if os.path.isdir(os.path.join(_base, 'bitgnome')):
+        sys.path.insert(0, _base)
+        break
 
 from bitgnome.app import main  # noqa: E402
 
