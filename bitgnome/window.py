@@ -616,6 +616,17 @@ class MainWindow(Adw.ApplicationWindow):
 
         Worker(work, done)
 
+    def _display_path(self, rel):
+        """Path relative to the copied folder, not the absolute path."""
+        for path, _ftype in self._include_roots():
+            root = path.lstrip('/')
+            name = os.path.basename(path.rstrip('/')) or path
+            if rel == root:
+                return name
+            if rel.startswith(root + '/'):
+                return f'{name}/{rel[len(root) + 1:]}'
+        return rel
+
     def _search_tree(self, query, max_results=200, max_depth=8):
         sid = self._current_sid()
         results = []
@@ -681,7 +692,8 @@ class MainWindow(Adw.ApplicationWindow):
             labels.set_hexpand(True)
             name = Gtk.Label(label=entry['name'], xalign=0)
             name.add_css_class('rw-row-name')
-            path = Gtk.Label(label='/' + entry['parent_rel'], xalign=0)
+            path = Gtk.Label(label=self._display_path(entry['parent_rel']),
+                             xalign=0)
             path.add_css_class('rw-row-dim')
             path.set_ellipsize(Pango.EllipsizeMode.MIDDLE)
             labels.append(name)
@@ -1076,7 +1088,8 @@ class MainWindow(Adw.ApplicationWindow):
             base = self._current_dir()
             if not base or not os.path.isdir(base):
                 self._show_empty('Carpeta no disponible',
-                                 f'No existe o no hay permisos: {base or self.rel}')
+                                 'No existe o no hay permisos: '
+                                 f'{self._display_path(self.rel)}')
                 return
             entries = self._iter_dir(base)
         else:

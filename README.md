@@ -103,7 +103,8 @@ that layout is **Rewind**; the package and the repository keep the
   and folder and computed off the main thread for big directories.
 - **Search**: from two characters the search box walks the whole point in time
   in a worker and lists matches with their folder, instead of filtering only the
-  folder in view.
+  folder in view. Paths are shown relative to the copied folder
+  (`Documentos/informe.odt`), never the full `/home/...` path.
 - **Take snapshot**: runs `Snapshots.backup(force=True)` in a thread with a
   progress dialog that reads `takeSnapshotMessage()`. **Parar la copia** kills
   the rsync child; the core marks the partial snapshot as failed, so the window
@@ -137,6 +138,8 @@ that layout is **Rewind**; the package and the repository keep the
 ![Main window](capturas/ventana-principal.png)
 
 ![Time travel](capturas/viaje-en-el-tiempo.png)
+
+![Search](capturas/busqueda.png)
 
 ![Settings](capturas/ajustes.png)
 

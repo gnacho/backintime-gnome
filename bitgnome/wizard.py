@@ -212,7 +212,9 @@ class FirstRunWizard(Adw.Window):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         title = Gtk.Label(label=label, xalign=0)
         title.add_css_class('rw-choice-title')
-        sub = Gtk.Label(label=path, xalign=0,
+        home = os.path.expanduser('~')
+        shown = path.replace(home, '~', 1) if path.startswith(home) else path
+        sub = Gtk.Label(label=shown, xalign=0,
                         ellipsize=Pango.EllipsizeMode.MIDDLE)
         sub.add_css_class('rw-choice-sub')
         box.append(title)
