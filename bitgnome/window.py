@@ -71,6 +71,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._quit_when_done = False
         self._request_stop = None
         self._close_dialog = None
+        self._closing_after_foreign_stop = False
         self._playing = False
         self._play_source = None
 
@@ -648,7 +649,12 @@ class MainWindow(Adw.ApplicationWindow):
             self.meta_dest.set_markup(
                 f'Destino · <b>{format_size(free)} libres</b> ({pct}%)')
         else:
-            self.meta_dest.set_text('Destino · sin configurar')
+            dest = self.backend.destination_path()
+            if dest:
+                name = os.path.basename(dest.rstrip('/')) or dest
+                self.meta_dest.set_markup(f'Destino · <b>{name}</b>')
+            else:
+                self.meta_dest.set_text('Destino · sin configurar')
         self.meta_ret.set_markup(self._retention_text())
         self.ring_area.queue_draw()
 
@@ -1177,6 +1183,8 @@ class MainWindow(Adw.ApplicationWindow):
         Worker(self.backend.take_snapshot, done)
 
     def _on_close_request(self, *_):
+        if self._closing_after_foreign_stop:
+            return False
         if not self._snap_worker_running:
             if self.backend.busy_backup:
                 return self._foreign_backup_close()
@@ -1222,12 +1230,23 @@ class MainWindow(Adw.ApplicationWindow):
                 return
             self.backend.stop_snapshot()
             self.toast('Deteniendo la copia y saliendo…')
-            GLib.timeout_add(1200, lambda: (self.close(), False)[1])
+            self._wait_foreign_and_close()
 
         dialog.connect('response', on_response)
         self._close_dialog = dialog
         dialog.present()
         return True
+
+    def _wait_foreign_and_close(self, tries=0):
+        if not self.backend.busy_backup or tries >= 24:
+            self._closing_after_foreign_stop = True
+            self.close()
+            return False
+        if tries == 8:
+            import signal
+            self.backend.stop_snapshot(signal.SIGKILL)
+        GLib.timeout_add(500, self._wait_foreign_and_close, tries + 1)
+        return False
 
     def _on_close_response(self, dialog, response):
         self._close_dialog = None
@@ -1285,6 +1304,24 @@ class MainWindow(Adw.ApplicationWindow):
             return
         name = self.selected['name']
         absolute = '/' + self.selected['rel']
+        roots = {path.lstrip('/') for path, _t in self._include_roots()}
+        if self.selected['rel'] in roots:
+            old = list(self.cfg.include())
+            new = [e for e in old if e[0].lstrip('/') != self.selected['rel']]
+            try:
+                self.cfg.setInclude(new)
+                if not ui.save(self.cfg):
+                    self.cfg.setInclude(old)
+                    self.toast('No se pudo guardar el cambio')
+                    return
+            except Exception as exc:  # noqa: BLE001
+                self.cfg.setInclude(old)
+                self.toast(f'No se pudo quitar la carpeta: {exc}')
+                return
+            self.toast(f'«{name}» ya no se copiará', 'Deshacer',
+                       lambda: self._undo_remove_include(old))
+            self.reload_snapshots()
+            return
         try:
             patterns = list(self.cfg.exclude())
         except Exception:  # noqa: BLE001
@@ -1305,6 +1342,17 @@ class MainWindow(Adw.ApplicationWindow):
         self.toast(f'«{name}» dejará de copiarse', 'Deshacer',
                    lambda: self._undo_exclude(absolute))
 
+    def _undo_remove_include(self, entries):
+        try:
+            self.cfg.setInclude(entries)
+            if ui.save(self.cfg):
+                self.toast('Vuelve a estar protegida')
+                self.reload_snapshots()
+            else:
+                self.toast('No se pudo guardar el cambio')
+        except Exception:  # noqa: BLE001
+            pass
+
     def _undo_exclude(self, absolute):
         try:
             patterns = [p for p in self.cfg.exclude() if p != absolute]
@@ -1312,6 +1360,7 @@ class MainWindow(Adw.ApplicationWindow):
             if ui.save(self.cfg):
                 self.toast('Sigue protegido')
             else:
+                self.cfg.setExclude(patterns + [absolute])
                 self.toast('No se pudo guardar el cambio')
         except Exception:  # noqa: BLE001
             pass

@@ -369,11 +369,11 @@ class SettingsSheet(Adw.Window):
             except Exception:  # noqa: BLE001
                 pass
 
-            def apply(e, set_=setter, label=title):
+            def apply(e, set_=setter, label=title, get=getter):
                 text = e.get_text().strip()
                 if label == 'Puerto':
                     if not text.isdigit() or not 1 <= int(text) <= 65535:
-                        e.set_text(str(_safe(getter) or '22'))
+                        e.set_text(str(_safe(get) or '22'))
                         if self._error_label is not None:
                             self._error_label.set_text('Puerto SSH no válido')
                         return
@@ -489,7 +489,7 @@ class SettingsSheet(Adw.Window):
         except Exception:  # noqa: BLE001
             return
         if self.on_change:
-            self.on_change()
+            self.on_change(reload=True)
         self.close()
 
     # ---------------------------------------------------------------- utils

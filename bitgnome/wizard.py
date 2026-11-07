@@ -82,6 +82,8 @@ class FirstRunWizard(Adw.Window):
         self._stop_attempts = 0
         self._applied = False
         self._frequency_ready = False
+        self._closing = False
+        self._escalate_source = None
         self._closed_after_run = False
         self._pulse = None
         self._snapshots_before = 0
@@ -431,10 +433,14 @@ class FirstRunWizard(Adw.Window):
     def _stop_backup(self, *_):
         self._stop_requested = True
         self._stop_attempts = 0
-        self.file_label.set_text('Deteniendo la copia…')
-        self.stop_btn.set_sensitive(False)
+        if hasattr(self, 'file_label'):
+            self.file_label.set_text('Deteniendo la copia…')
+        if hasattr(self, 'stop_btn'):
+            self.stop_btn.set_sensitive(False)
         self._attempt_stop()
-        GLib.timeout_add_seconds(6, self._escalate_stop)
+        if self._escalate_source is None:
+            self._escalate_source = GLib.timeout_add_seconds(
+                6, self._escalate_stop)
 
     def _attempt_stop(self):
         if not self._stop_requested or not self._running:
@@ -445,6 +451,7 @@ class FirstRunWizard(Adw.Window):
         return False
 
     def _escalate_stop(self):
+        self._escalate_source = None
         if self._running and self._stop_requested:
             import signal
             self.backend.stop_snapshot(signal.SIGKILL)
@@ -453,10 +460,12 @@ class FirstRunWizard(Adw.Window):
     def _done(self, error_message, error):
         self._stop_pulse()
         self._running = False
+        if self._escalate_source is not None:
+            GLib.source_remove(self._escalate_source)
+            self._escalate_source = None
         if self.backend.busy_owner == 'wizard':
             self.backend.busy_backup = False
             self.backend.busy_owner = None
-        self._notify()
         stopped = getattr(self, '_stop_requested', False)
         fresh = self.backend.list_snapshots()
         created = len(fresh) > self._snapshots_before
@@ -469,6 +478,12 @@ class FirstRunWizard(Adw.Window):
                 except Exception:  # noqa: BLE001
                     pass
 
+        # notify after discarding the partial snapshot, or the window would
+        # list a point that no longer exists on disk
+        self._notify()
+        if self._closing:
+            self.close()
+            return
         if stopped and not created:
             self._fail('Copia detenida. No se guardó nada.')
             return
@@ -533,18 +548,10 @@ class FirstRunWizard(Adw.Window):
         def on_response(_d, response):
             if response != 'stop':
                 return
-            self._stop_requested = True
-            self.backend.stop_snapshot()
-            self._closed_after_run = True
-            self._stop_pulse()
-            self._running = False
-
-            def finish_close():
-                self._notify()
-                self.close()
-                return False
-
-            GLib.timeout_add(800, finish_close)
+            # keep _running True so the stop keeps retrying and escalating;
+            # _done closes the window after discarding the partial snapshot
+            self._closing = True
+            self._stop_backup()
 
         dialog.connect('response', on_response)
         dialog.present()

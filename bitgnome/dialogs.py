@@ -227,8 +227,12 @@ class DiffDialog(Adw.Window):
             except Exception:  # noqa: BLE001
                 old_path = None
 
+        limit = 2 * 1024 * 1024
+
         def read(p):
             try:
+                if os.path.getsize(p) > limit:
+                    return 'too-big'
                 with open(p, encoding='utf-8', errors='replace') as f:
                     return f.readlines()
             except OSError:
@@ -237,6 +241,10 @@ class DiffDialog(Adw.Window):
         new_lines = read(new_path) if new_path else None
         old_lines = read(old_path) if old_path else None
 
+        if new_lines == 'too-big' or old_lines == 'too-big':
+            buf.set_text('El archivo es demasiado grande para el diff '
+                         'interno (más de 2 MB).')
+            return
         if new_lines is None:
             buf.set_text('No se puede leer el archivo en la instantánea.')
             return

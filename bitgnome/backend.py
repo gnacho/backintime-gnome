@@ -12,6 +12,7 @@ import contextlib
 import inspect
 import os
 import shutil
+import subprocess
 import sys
 import threading
 
@@ -284,8 +285,31 @@ class Backend:
             except Exception as exc:      # noqa: BLE001
                 self.last_automation_error = str(exc)
                 return False
+            if not self._cron_installed():
+                self.last_automation_error = 'crontab not updated'
+                return False
             self.last_automation_error = None
             return True
+
+    def _cron_installed(self):
+        """The core swallows crontab write errors; check the result."""
+        try:
+            mode = getattr(self.cfg.scheduleMode(), 'name', '')
+        except Exception:                 # noqa: BLE001
+            return True
+        if mode in ('DISABLED', 'UDEV', 'AT_EVERY_BOOT'):
+            return True
+        binary = shutil.which('crontab') or shutil.which('fcrontab')
+        if binary is None:
+            return False
+        try:
+            out = subprocess.run([binary, '-l'], capture_output=True,
+                                 text=True, timeout=10)
+        except Exception:                 # noqa: BLE001
+            return False
+        if out.returncode not in (0, 1):
+            return False
+        return 'backintime' in out.stdout.lower()
 
     @staticmethod
     def _clean_path(path):
@@ -296,7 +320,21 @@ class Backend:
         return None if path in ('', '.') else path
 
     def destination_path(self, pid=None):
-        """Backup destination of a profile, whatever the core version."""
+        """Backup destination of a profile, whatever the core version.
+
+        For SSH profiles the answer is the remote path; ``snapshotsFullPath``
+        would return the internal mountpoint instead.
+        """
+        mode = ''
+        try:
+            mode = str(self.cfg.snapshotsMode(pid))
+        except Exception:                 # noqa: BLE001
+            pass
+        if 'ssh' in mode:
+            try:
+                return self._clean_path(self.cfg.sshSnapshotsPath(pid))
+            except Exception:             # noqa: BLE001
+                return None
         try:
             getter = getattr(self.cfg, 'get_backup_destination_path', None)
             if getter is not None:
