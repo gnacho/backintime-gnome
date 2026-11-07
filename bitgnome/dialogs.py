@@ -193,8 +193,8 @@ class DiffDialog(Adw.Window):
     """Unified diff between the file in a snapshot and the previous one
     (or the live file when comparing «Ahora»)."""
 
-    def __init__(self, parent, sid, abs_path, prev_sid):
-        name = os.path.basename(abs_path)
+    def __init__(self, parent, sid, rel_path, prev_sid):
+        name = os.path.basename(rel_path.rstrip('/')) or rel_path
         super().__init__(transient_for=parent, modal=False,
                          title=f'Cambios - {name}',
                          default_width=820, default_height=560)
@@ -213,14 +213,17 @@ class DiffDialog(Adw.Window):
         tag_del = buf.create_tag('del', background='rgba(224,27,36,0.22)')
         tag_h = buf.create_tag('h', foreground='#7aa2d8')
 
+        def snapshot_path(snap, rel):
+            return snap.pathBackup(rel) if rel else snap.pathBackup()
+
+        try:
+            new_path = snapshot_path(sid, rel_path)
+        except Exception:  # noqa: BLE001
+            new_path = None
         old_path = None
         if prev_sid is not None:
             try:
-                # 2.0 raises on an empty path argument
-                base = sid.pathBackup() if hasattr(sid, 'pathBackup') else ''
-                rel = os.path.relpath(abs_path, base) if base else \
-                    abs_path.lstrip('/')
-                old_path = prev_sid.pathBackup(rel)
+                old_path = snapshot_path(prev_sid, rel_path)
             except Exception:  # noqa: BLE001
                 old_path = None
 
@@ -231,11 +234,15 @@ class DiffDialog(Adw.Window):
             except OSError:
                 return None
 
-        new_lines = read(abs_path)
+        new_lines = read(new_path) if new_path else None
         old_lines = read(old_path) if old_path else None
 
         if new_lines is None:
             buf.set_text('No se puede leer el archivo en la instantánea.')
+            return
+        if prev_sid is None:
+            buf.set_text('No hay una instantánea anterior con la que '
+                         'comparar: este es el punto más antiguo.')
             return
         if old_lines is None:
             buf.set_text('El archivo no existía en la instantánea anterior '

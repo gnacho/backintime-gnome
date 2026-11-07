@@ -11,7 +11,7 @@ import gi
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Adw, Gtk, Pango  # noqa: E402
+from gi.repository import Adw, Gtk  # noqa: E402
 
 from . import backend as _backend  # noqa: E402
 from . import ui  # noqa: E402
@@ -28,6 +28,13 @@ MODE_LABELS = {
 }
 UNIT_NAMES = {'HOUR': 'horas', 'DAY': 'días', 'WEEK': 'semanas',
               'MONTH': 'meses', 'YEAR': 'años'}
+def _safe(getter, default=None):
+    try:
+        return getter()
+    except Exception:  # noqa: BLE001
+        return default
+
+
 SCHEDULE_MODES = [
     ('hour', 'Cada hora'),
     ('day', 'Cada día'),
@@ -196,22 +203,28 @@ class SettingsSheet(Adw.Window):
     # ---------------------------------------------------------- destination
     def _build_destination(self):
         self.body.append(ui.group_title('Dónde'))
+        mode, path = self.backend.profile_summary()
+        local = 'local' in self.backend.profile_mode()
         change = Gtk.Button(label='Cambiar…')
         change.add_css_class('rw-soft')
+        change.set_sensitive(local)
         change.connect('clicked', self._change_destination)
-        mode, path = self.backend.profile_summary()
-        self.destination_label = Gtk.Label(label=path or 'sin configurar', xalign=0,
-                                           ellipsize=Pango.EllipsizeMode.MIDDLE)
-        self.destination_label.set_tooltip_text(path or '')
-        self.body.append(ui.row(
-            f'Destino ({mode})', path or 'sin configurar', change))
+        subtitle = path or 'sin configurar'
+        if not local:
+            subtitle = (f'Perfil en modo {mode}: la ruta se edita en '
+                        'Gestionar perfiles')
+        self.destination_row = ui.row(f'Destino ({mode})', subtitle, change)
+        self.body.append(self.destination_row)
 
     def _change_destination(self, _btn):
         def on_path(path):
             try:
                 self.backend.set_destination_path(path)
                 self._save()
-                self.destination_label.set_text(path)
+                if self.destination_row.subtitle is not None:
+                    self.destination_row.subtitle.set_text(path)
+                if self.on_change:
+                    self.on_change(reload=True)
             except Exception:  # noqa: BLE001
                 pass
 
@@ -356,9 +369,16 @@ class SettingsSheet(Adw.Window):
             except Exception:  # noqa: BLE001
                 pass
 
-            def apply(e, set_=setter):
+            def apply(e, set_=setter, label=title):
+                text = e.get_text().strip()
+                if label == 'Puerto':
+                    if not text.isdigit() or not 1 <= int(text) <= 65535:
+                        e.set_text(str(_safe(getter) or '22'))
+                        if self._error_label is not None:
+                            self._error_label.set_text('Puerto SSH no válido')
+                        return
                 try:
-                    set_(e.get_text())
+                    set_(text)
                     self._save()
                 except Exception:  # noqa: BLE001
                     pass

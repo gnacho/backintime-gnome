@@ -79,6 +79,9 @@ class FirstRunWizard(Adw.Window):
         self.destination = ''
         self._running = False
         self._stop_requested = False
+        self._stop_attempts = 0
+        self._applied = False
+        self._frequency_ready = False
         self._closed_after_run = False
         self._pulse = None
         self._snapshots_before = 0
@@ -109,18 +112,17 @@ class FirstRunWizard(Adw.Window):
         self.preserved = [(path, ftype) for path, ftype in entries
                           if path not in candidates]
         if not self.folders:
-            home = os.path.expanduser('~')
             for _label, path in candidate_dirs()[:2]:
                 self.folders.add(path)
-            if not self.folders:
-                self.folders.add(home)
-                self.preserved = [e for e in self.preserved if e[0] != home]
         try:
             self.destination = self.backend.destination_path() or ''
         except Exception:  # noqa: BLE001
             self.destination = ''
 
     def _preselect_frequency(self):
+        if self._frequency_ready:
+            return
+        self._frequency_ready = True
         try:
             name = getattr(self.cfg.scheduleMode(), 'name', '')
         except Exception:  # noqa: BLE001
@@ -181,6 +183,11 @@ class FirstRunWizard(Adw.Window):
             flow.insert(self._folder_toggle(label, path), -1)
 
         self.card.append(flow)
+        if not options:
+            hint = Gtk.Label(label='No se han encontrado carpetas estándar. '
+                             'Usa «Elegir otra carpeta…».', xalign=0, wrap=True)
+            hint.add_css_class('rw-wiz-sub')
+            self.card.append(hint)
         add = Gtk.Button(label='Elegir otra carpeta…')
         add.add_css_class('rw-soft')
         add.set_halign(Gtk.Align.START)
@@ -376,6 +383,7 @@ class FirstRunWizard(Adw.Window):
             if not ui.save(self.cfg):
                 self._toast('No se pudo guardar la configuración')
                 return False
+            self._applied = True
         except Exception as exc:  # noqa: BLE001
             self._toast(f'No se pudo guardar: {exc}')
             return False
@@ -400,9 +408,13 @@ class FirstRunWizard(Adw.Window):
         buttons.append(self.stop_btn)
         self.card.append(buttons)
 
+        if self.backend.busy_backup:
+            self._fail('Ya hay otra copia en curso. Espera a que termine.')
+            return
         self._snapshots_before = len(self.backend.list_snapshots())
         self._running = True
         self.backend.busy_backup = True
+        self.backend.busy_owner = 'wizard'
         self._pulse = GLib.timeout_add(400, self._tick)
         Worker(self.backend.take_snapshot, self._done)
 
@@ -418,14 +430,33 @@ class FirstRunWizard(Adw.Window):
 
     def _stop_backup(self, *_):
         self._stop_requested = True
+        self._stop_attempts = 0
         self.file_label.set_text('Deteniendo la copia…')
         self.stop_btn.set_sensitive(False)
-        self.backend.stop_snapshot()
+        self._attempt_stop()
+        GLib.timeout_add_seconds(6, self._escalate_stop)
+
+    def _attempt_stop(self):
+        if not self._stop_requested or not self._running:
+            return False
+        if not self.backend.stop_snapshot() and self._stop_attempts < 4:
+            self._stop_attempts += 1
+            GLib.timeout_add(1000, self._attempt_stop)
+        return False
+
+    def _escalate_stop(self):
+        if self._running and self._stop_requested:
+            import signal
+            self.backend.stop_snapshot(signal.SIGKILL)
+        return False
 
     def _done(self, error_message, error):
         self._stop_pulse()
         self._running = False
-        self.backend.busy_backup = False
+        if self.backend.busy_owner == 'wizard':
+            self.backend.busy_backup = False
+            self.backend.busy_owner = None
+        self._notify()
         stopped = getattr(self, '_stop_requested', False)
         fresh = self.backend.list_snapshots()
         created = len(fresh) > self._snapshots_before
@@ -474,15 +505,20 @@ class FirstRunWizard(Adw.Window):
             GLib.source_remove(self._pulse)
             self._pulse = None
 
+    def _notify(self):
+        if self._applied and self.on_done:
+            callback, self.on_done = self.on_done, None
+            callback()
+
     def _close_after(self):
         self._closed_after_run = True
+        self._notify()
         self.close()
-        if self.on_done:
-            self.on_done()
         return False
 
     def _on_close_request(self, *_):
         if not self._running:
+            self._notify()
             return False
         dialog = Adw.MessageDialog(
             transient_for=self, modal=True,
@@ -501,7 +537,14 @@ class FirstRunWizard(Adw.Window):
             self.backend.stop_snapshot()
             self._closed_after_run = True
             self._stop_pulse()
-            GLib.timeout_add(800, lambda: (self.close(), False)[1])
+            self._running = False
+
+            def finish_close():
+                self._notify()
+                self.close()
+                return False
+
+            GLib.timeout_add(800, finish_close)
 
         dialog.connect('response', on_response)
         dialog.present()

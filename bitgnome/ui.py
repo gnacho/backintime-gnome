@@ -72,15 +72,19 @@ def row(title, subtitle=None, suffix=None):
     """Plain settings row: title (and subtitle) on the left, widget right."""
     box = Gtk.Box(spacing=12)
     box.add_css_class('rw-srow')
+    box.title_label = None
+    box.subtitle = None
     labels = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=1)
     labels.set_hexpand(True)
     head = Gtk.Label(label=title, xalign=0)
     head.add_css_class('rw-srow-title')
     labels.append(head)
+    box.title_label = head
     if subtitle:
         sub = Gtk.Label(label=subtitle, xalign=0, wrap=True)
         sub.add_css_class('rw-srow-sub')
         labels.append(sub)
+        box.subtitle = sub
     box.append(labels)
     if suffix is not None:
         box.append(suffix)

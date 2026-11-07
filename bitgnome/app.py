@@ -69,7 +69,7 @@ class BackInTimeApp(Adw.Application):
         dialog = Adw.AboutWindow(
             transient_for=self.get_active_window(),
             application_name='Rewind',
-            application_icon='rewind',
+            application_icon='document-revert-symbolic',
             version=__version__,
             developer_name='Equipo de Back In Time · front GNOME',
             license_type=Gtk.License.GPL_2_0,

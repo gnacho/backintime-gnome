@@ -201,7 +201,7 @@ class PreferencesWindow(Adw.PreferencesWindow):
                 f = d.get_file()
                 if f:
                     self.path_entry.set_text(f.get_path())
-                    self.cfg.set_snapshots_path(f.get_path())
+                    self.backend.set_destination_path(f.get_path())
                     self._save()
 
         dlg.connect('response', on_response)

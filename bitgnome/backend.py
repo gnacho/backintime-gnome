@@ -11,6 +11,7 @@ mount manager). The differences are detected at runtime.
 import contextlib
 import inspect
 import os
+import shutil
 import sys
 import threading
 
@@ -163,6 +164,9 @@ class Backend:
         self.cfg = None
         self.error = None
         self.busy_backup = False      # shared with the wizard
+        self.busy_owner = None
+        self._automation_lock = threading.Lock()
+        self.last_automation_error = None
         self._snapshots = None        # cached: Snapshots() costs ~260 ms
         if not available():
             self.error = _IMPORT_ERROR
@@ -252,19 +256,36 @@ class Backend:
         else:
             self.cfg.set_snapshots_path(path)
 
+    def automation_supported(self):
+        """Whether the loaded core can install the schedule for this mode."""
+        try:
+            mode = getattr(self.cfg.scheduleMode(), 'name', '')
+        except Exception:                 # noqa: BLE001
+            return True
+        if mode in ('DISABLED', 'UDEV', 'AT_EVERY_BOOT'):
+            return True
+        return bool(shutil.which('crontab') or shutil.which('fcrontab'))
+
     def apply_automation(self):
         """Install or refresh the cron/udev entry for the schedule.
 
         The Qt client does this on startup; without it a schedule chosen in
-        the GUI is never executed.
+        the GUI is never executed. ``setup_automation`` swallows write
+        failures, so the cron binary is checked first.
         """
         if self.cfg is None:
             return False
-        try:
-            self.cfg.setup_automation()
+        with self._automation_lock:
+            if not self.automation_supported():
+                self.last_automation_error = 'no crontab installed'
+                return False
+            try:
+                self.cfg.setup_automation()
+            except Exception as exc:      # noqa: BLE001
+                self.last_automation_error = str(exc)
+                return False
+            self.last_automation_error = None
             return True
-        except Exception:                 # noqa: BLE001
-            return False
 
     @staticmethod
     def _clean_path(path):

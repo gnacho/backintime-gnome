@@ -83,7 +83,7 @@ class MainWindow(Adw.ApplicationWindow):
             self._show_backend_error(self.backend.error)
         else:
             self.reload_snapshots()
-            Worker(self.backend.apply_automation, lambda *_: None)
+            Worker(self.backend.apply_automation, self._automation_done)
             GLib.idle_add(self._maybe_wizard)
 
     # ------------------------------------------------------------------ UI
@@ -443,6 +443,12 @@ class MainWindow(Adw.ApplicationWindow):
             toast.connect('button-clicked', lambda *_: action())
         self.toast_overlay.add_toast(toast)
 
+    def _automation_done(self, created, error):
+        if error or created is False:
+            self.toast('No hay cron instalado: las copias automáticas no se '
+                       'ejecutarán', 'Abrir ajustes', self.open_settings)
+        return False
+
     def _maybe_wizard(self):
         if self.backend.error or self.cfg is None:
             return False
@@ -477,17 +483,39 @@ class MainWindow(Adw.ApplicationWindow):
             Adw.ColorScheme.DEFAULT if manager.get_dark()
             else Adw.ColorScheme.FORCE_DARK)
 
-    def _on_settings_changed(self):
+    def _on_settings_changed(self, reload=False):
+        if not reload:
+            self._update_hero()
+            self.render_files()
+            return
+        self._stop_play()
         self.index = None
+        self.rel = ''
+        self.selected = None
         self.reload_snapshots()
 
     # ------------------------------------------------------------ snapshots
     def reload_snapshots(self):
+        current = self._current_sid()
         self.sids = self.backend.list_snapshots()
         self.chrono = list(reversed(self.sids))
-        if self.index is not None:
-            self.index = min(self.index, len(self.chrono) - 1) \
-                if self.chrono else None
+        if current is not None:
+            anchor = None
+            try:
+                key = current.path()
+            except Exception:  # noqa: BLE001
+                key = None
+            for i, sid in enumerate(self.chrono):
+                try:
+                    if key is not None and sid.path() == key:
+                        anchor = i
+                        break
+                except Exception:  # noqa: BLE001
+                    continue
+            self.index = anchor
+            if anchor is None:
+                self.rel = ''
+                self.selected = None
         self.timeline.set_count(len(self.chrono))
         self._update_hero()
         self._apply_mode()
@@ -1021,6 +1049,7 @@ class MainWindow(Adw.ApplicationWindow):
             return
         self._snap_worker_running = True
         self.backend.busy_backup = True
+        self.backend.busy_owner = 'window'
         self._snapshots_before_take = len(self.chrono)
         self.snap_btn.set_sensitive(False)
         self.snap_btn.set_label('Copiando…')
@@ -1105,7 +1134,9 @@ class MainWindow(Adw.ApplicationWindow):
 
         def done(error_message, error):
             self._snap_worker_running = False
-            self.backend.busy_backup = False
+            if self.backend.busy_owner == 'window':
+                self.backend.busy_backup = False
+                self.backend.busy_owner = None
             self._request_stop = None
             if self._snap_poll_source is not None:
                 GLib.source_remove(self._snap_poll_source)
@@ -1147,6 +1178,8 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _on_close_request(self, *_):
         if not self._snap_worker_running:
+            if self.backend.busy_backup:
+                return self._foreign_backup_close()
             return False
         if self._close_dialog is not None:
             return True
@@ -1166,10 +1199,41 @@ class MainWindow(Adw.ApplicationWindow):
         dialog.present()
         return True
 
+    def _foreign_backup_close(self):
+        """A backup started by the wizard is running; the window does not own
+        its worker, so it can only ask or stop it."""
+        if self._close_dialog is not None:
+            return True
+        dialog = Adw.MessageDialog(
+            transient_for=self, modal=True,
+            heading='Hay una copia en curso',
+            body='La está ejecutando el asistente. Si sales ahora se quedará '
+                 'a medias.')
+        dialog.add_response('cancel', 'Cancelar')
+        dialog.add_response('stop', 'Detener y salir')
+        dialog.set_response_appearance('stop',
+                                       Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.set_close_response('cancel')
+
+        def on_response(dlg, response):
+            self._close_dialog = None
+            dlg.destroy()
+            if response != 'stop':
+                return
+            self.backend.stop_snapshot()
+            self.toast('Deteniendo la copia y saliendo…')
+            GLib.timeout_add(1200, lambda: (self.close(), False)[1])
+
+        dialog.connect('response', on_response)
+        self._close_dialog = dialog
+        dialog.present()
+        return True
+
     def _on_close_response(self, dialog, response):
         self._close_dialog = None
         dialog.destroy()
         if response == 'cancel':
+            self._quit_when_done = False
             return
         if response == 'stop' and self._request_stop is not None:
             self._request_stop()
@@ -1226,6 +1290,7 @@ class MainWindow(Adw.ApplicationWindow):
         except Exception:  # noqa: BLE001
             patterns = []
         if absolute in patterns:
+            self.toast(f'«{name}» ya estaba excluido')
             return
         patterns.append(absolute)
         try:
@@ -1244,8 +1309,10 @@ class MainWindow(Adw.ApplicationWindow):
         try:
             patterns = [p for p in self.cfg.exclude() if p != absolute]
             self.cfg.setExclude(patterns)
-            ui.save(self.cfg)
-            self.toast('Sigue protegido')
+            if ui.save(self.cfg):
+                self.toast('Sigue protegido')
+            else:
+                self.toast('No se pudo guardar el cambio')
         except Exception:  # noqa: BLE001
             pass
 
@@ -1305,7 +1372,7 @@ class MainWindow(Adw.ApplicationWindow):
             rel = self.selected['rel']
         older = self.chrono[self.index - 1] if self.index else None
         from bitgnome.dialogs import DiffDialog
-        DiffDialog(self, sid, '/' + rel, older).present()
+        DiffDialog(self, sid, rel, older).present()
 
     # ---------------------------------------------------------------- play
     def toggle_play(self):
