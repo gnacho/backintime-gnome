@@ -1,0 +1,109 @@
+"""Adw.Application wiring: actions, shortcuts, about."""
+import sys
+
+import gi
+
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
+from gi.repository import Adw, Gio, Gtk  # noqa: E402
+
+from bitgnome import APP_ID, __version__  # noqa: E402
+from bitgnome.backend import Backend  # noqa: E402
+
+
+class BackInTimeApp(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id=APP_ID,
+                         flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
+        self.backend = Backend()
+        self._add_action('quit', lambda *_: self.quit(), ['<Control>q'])
+        self._add_action('preferences', self._preferences, ['<Control>comma'])
+        self._add_action('about', self._about)
+        self._add_action('shortcuts', self._shortcuts)
+        self._add_action('take-snapshot', lambda *_: self._win('take_snapshot'),
+                         ['<Control>s'])
+        self._add_action('restore', lambda *_: self._win('restore_selection'),
+                         ['<Control>r'])
+        self._add_action('restore-to', lambda *_: self._win('restore_selection', True))
+        self._add_action('log-view', lambda *_: self._win('show_log'))
+        self._add_action('diff', lambda *_: self._win('show_diff'))
+
+    def _win(self, method, *args):
+        win = self.get_active_window()
+        if win:
+            getattr(win, method)(*args)
+
+    def _add_action(self, name, callback, shortcuts=None):
+        action = Gio.SimpleAction.new(name, None)
+        action.connect('activate', callback)
+        self.add_action(action)
+        if shortcuts:
+            self.set_accels_for_action(f'app.{name}', shortcuts)
+
+    def do_activate(self):
+        from bitgnome.window import MainWindow
+        win = self.get_active_window() or MainWindow(self)
+        win.present()
+
+    def _preferences(self, *_):
+        from bitgnome.prefs import PreferencesWindow
+        PreferencesWindow(self).present()
+
+    def _about(self, *_):
+        dialog = Adw.AboutWindow(
+            transient_for=self.get_active_window(),
+            application_name='Back In Time',
+            application_icon='camera-photo-symbolic',
+            version=__version__,
+            developer_name='Equipo de Back In Time · front GNOME',
+            license_type=Gtk.License.GPL_2_0,
+            website='https://github.com/bit-team/backintime',
+            issue_url='https://github.com/bit-team/backintime/issues',
+            comments='Interfaz GTK4 + libadwaita sobre el núcleo de Back In Time.',
+        )
+        dialog.present()
+
+    def _shortcuts(self, *_):
+        builder = Gtk.Builder()
+        builder.add_from_string('''
+<interface>
+  <object class="GtkShortcutsWindow" id="win">
+    <property name="modal">True</property>
+    <child>
+      <object class="GtkShortcutsSection">
+        <child>
+          <object class="GtkShortcutsGroup">
+            <property name="title">General</property>
+            <child><object class="GtkShortcutsShortcut">
+              <property name="title">Tomar instantánea</property>
+              <property name="accelerator">&lt;Control&gt;s</property>
+            </object></child>
+            <child><object class="GtkShortcutsShortcut">
+              <property name="title">Restaurar</property>
+              <property name="accelerator">&lt;Control&gt;r</property>
+            </object></child>
+            <child><object class="GtkShortcutsShortcut">
+              <property name="title">Gestionar perfiles</property>
+              <property name="accelerator">&lt;Control&gt;comma</property>
+            </object></child>
+            <child><object class="GtkShortcutsShortcut">
+              <property name="title">Mostrar instantáneas</property>
+              <property name="accelerator">F9</property>
+            </object></child>
+            <child><object class="GtkShortcutsShortcut">
+              <property name="title">Salir</property>
+              <property name="accelerator">&lt;Control&gt;q</property>
+            </object></child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>''')
+        win = builder.get_object('win')
+        win.set_transient_for(self.get_active_window())
+        win.present()
+
+
+def main():
+    return BackInTimeApp().run(sys.argv)
