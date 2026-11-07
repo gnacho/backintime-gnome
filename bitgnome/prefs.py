@@ -2,7 +2,7 @@
 
 Adw 1.2 baseline (PreferencesWindow, PreferencesPage/Group, ActionRow,
 EntryRow, ComboRow, SpinRow). Every control writes through
-``config.Config`` setters and calls ``cfg.save()`` — no mock state.
+``config.Config`` setters and calls ``cfg.save()`` - no mock state.
 """
 import gi
 

@@ -1,3 +1,3 @@
-"""Back In Time — GNOME frontend (GTK4 + libadwaita)."""
+"""Back In Time - GNOME frontend (GTK4 + libadwaita)."""
 __version__ = '0.1.0'
 APP_ID = 'com.github.bitteam.BackInTimeGNOME'

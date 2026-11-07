@@ -225,7 +225,7 @@ def format_size(n):
     try:
         n = float(n)
     except (TypeError, ValueError):
-        return '—'
+        return '-'
     for unit in ('B', 'KiB', 'MiB', 'GiB'):
         if n < 1024:
             return f'{int(n)} {unit}' if n == int(n) else f'{n:.1f} {unit}'

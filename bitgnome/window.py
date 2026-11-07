@@ -1,7 +1,7 @@
 """Main window: snapshots sidebar + file browser, GNOME style.
 
 Layout (Adw 1.2 baseline): AdwHeaderBar on top of a GtkBox; an
-AdwToastOverlay wraps a horizontal split — snapshot list (GtkListBox)
+AdwToastOverlay wraps a horizontal split - snapshot list (GtkListBox)
 and the file view (toolbar + GtkListBox + status bar).
 """
 import datetime

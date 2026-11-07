@@ -196,7 +196,7 @@ class DiffDialog(Adw.Window):
     def __init__(self, parent, sid, abs_path, prev_sid):
         name = os.path.basename(abs_path)
         super().__init__(transient_for=parent, modal=False,
-                         title=f'Cambios — {name}',
+                         title=f'Cambios - {name}',
                          default_width=820, default_height=560)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_content(box)
