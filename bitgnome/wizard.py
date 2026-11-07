@@ -523,7 +523,10 @@ class FirstRunWizard(Adw.Window):
     def _notify(self):
         if self._applied and self.on_done:
             callback, self.on_done = self.on_done, None
-            callback()
+            try:
+                callback()
+            except Exception:  # noqa: BLE001
+                pass
 
     def _close_after(self):
         self._closed_after_run = True

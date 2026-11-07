@@ -63,6 +63,7 @@ class SettingsSheet(Adw.Window):
         head.append(title)
         close = Gtk.Button(icon_name='window-close-symbolic')
         close.add_css_class('rw-ghost')
+        ui.a11y(close, 'Cerrar ajustes')
         close.connect('clicked', lambda *_: self.close())
         head.append(close)
         root.append(head)
@@ -364,6 +365,7 @@ class SettingsSheet(Adw.Window):
             entry = Gtk.Entry()
             entry.add_css_class('rw-entry')
             entry.set_width_chars(22)
+            ui.a11y(entry, title)
             try:
                 entry.set_text(str(getter() or ''))
             except Exception:  # noqa: BLE001

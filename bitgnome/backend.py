@@ -8,6 +8,7 @@ checkout pointed by ``BACKINTIME_COMMON``) and drive ``config.Config``,
 Works with Back In Time 1.6.x (EncFS modes) and 2.0.x (Gocryptfs modes,
 mount manager). The differences are detected at runtime.
 """
+import configparser
 import contextlib
 import inspect
 import os
@@ -169,6 +170,7 @@ class Backend:
         self._automation_lock = threading.Lock()
         self.last_automation_error = None
         self._snapshots = None        # cached: Snapshots() costs ~260 ms
+        self._mount_manager = None    # persistent mount for the app lifetime
         if not available():
             self.error = _IMPORT_ERROR
             return
@@ -179,6 +181,44 @@ class Backend:
             self.error = f'Config no válida (exit {exc.code})'
         except Exception as exc:          # noqa: BLE001
             self.error = str(exc)
+
+    def _state_path(self):
+        base = os.environ.get('XDG_CONFIG_HOME') or os.path.join(
+            os.path.expanduser('~'), '.config')
+        return os.path.join(base, 'backintime-gnome', 'state.ini')
+
+    def _saved_profile(self):
+        try:
+            parser = configparser.ConfigParser()
+            parser.read(self._state_path())
+            return parser.get('ui', 'profile', fallback=None)
+        except Exception:                 # noqa: BLE001
+            return None
+
+    def _remember_profile(self, pid):
+        try:
+            path = self._state_path()
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            parser = configparser.ConfigParser()
+            if os.path.exists(path):
+                parser.read(path)
+            if not parser.has_section('ui'):
+                parser.add_section('ui')
+            parser.set('ui', 'profile', str(pid))
+            with open(path, 'w', encoding='utf-8') as fh:
+                parser.write(fh)
+        except Exception:                 # noqa: BLE001
+            pass
+
+    def _restore_profile(self):
+        saved = self._saved_profile()
+        if not saved:
+            return
+        try:
+            if saved in [str(pid) for pid in self.cfg.profiles()]:
+                self.cfg.setCurrentProfile(saved)
+        except Exception:                 # noqa: BLE001
+            pass
 
     def _load_config(self):
         """Load the config the same way Bit's own CLI does.
@@ -196,11 +236,14 @@ class Backend:
         if loader is not None:
             loader(config_path=bitbase.context['--config'], pid_or_name=None)
             self.cfg = config.Config()
+            self._restore_profile()
             return
         if not self.cfg.profiles():
             pid = self.cfg.addProfile('Main profile')
             self.cfg.setCurrentProfile(pid)
             self.cfg.save()
+        else:
+            self._restore_profile()
 
     # -- profiles ------------------------------------------------------
     def profiles(self):
@@ -221,6 +264,7 @@ class Backend:
     def set_current_profile(self, pid):
         self.cfg.setCurrentProfile(pid)
         self._snapshots = None
+        self._remember_profile(pid)
 
     def _snapshots_obj(self):
         if self._snapshots is None:
@@ -357,13 +401,49 @@ class Backend:
         except Exception:                 # noqa: BLE001
             return '?', '?'
 
+    def ensure_mounted(self):
+        """Mount the destination once and keep it for the app lifetime.
+
+        Returns ``(ok, error)``. A plain local profile needs no mount; 1.6.x
+        has no mount manager at all.
+        """
+        if self.cfg is None:
+            return True, None
+        if str(self.profile_mode()) == 'local':
+            return True, None
+        manager_cls = getattr(mount, 'MountManager', None) if mount else None
+        if manager_cls is None:
+            return True, None
+        if self._mount_manager is not None:
+            return True, None
+        try:
+            manager = manager_cls.create(self.cfg)
+            manager.mount()
+        except Exception as exc:          # noqa: BLE001
+            return False, str(exc)
+        self._mount_manager = manager
+        return True, None
+
+    def release_mount(self):
+        if self._mount_manager is None:
+            return
+        try:
+            self._mount_manager.umount()
+        except Exception:                 # noqa: BLE001
+            pass
+        finally:
+            self._mount_manager = None
+
     @contextlib.contextmanager
     def mounted(self):
-        """Mount the destination when the core requires it (2.0+).
+        """Yield the path where the destination is mounted, or None.
 
-        1.6.x has no mount manager, so this is a no-op there. Yields the
-        path where the destination is mounted, or None.
+        When the app holds a persistent mount, reuse it instead of
+        mounting and unmounting around every call.
         """
+        if self._mount_manager is not None:
+            yield str(self._mount_manager.path)
+            return
         manager_cls = getattr(mount, 'MountManager', None) if mount else None
         if manager_cls is None:
             yield None

@@ -72,6 +72,15 @@ class MainWindow(Adw.ApplicationWindow):
         self._request_stop = None
         self._close_dialog = None
         self._closing_after_foreign_stop = False
+        self._busy_ops = 0
+        self._busy_label = ''
+        self._delta_cache = {}
+        self._delta_pending = set()
+        self._delta_token = 0
+        self._pending_index = None
+        self._seek_source = None
+        self._search_source = None
+        self._search_token = 0
         self._playing = False
         self._play_source = None
 
@@ -83,8 +92,7 @@ class MainWindow(Adw.ApplicationWindow):
         if self.backend.error:
             self._show_backend_error(self.backend.error)
         else:
-            self.reload_snapshots()
-            Worker(self.backend.apply_automation, self._automation_done)
+            self._prepare_profile()
             GLib.idle_add(self._maybe_wizard)
 
     # ------------------------------------------------------------------ UI
@@ -165,9 +173,10 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.search = Gtk.SearchEntry()
         self.search.set_placeholder_text('Buscar en el tiempo…')
+        ui.a11y(self.search, 'Buscar en el tiempo')
         self.search.add_css_class('rw-search')
         self.search.set_width_chars(18)
-        self.search.connect('search-changed', lambda *_: self.render_files())
+        self.search.connect('search-changed', self._on_search_changed)
         header.set_title_widget(self.search)
 
         primary = Gtk.Button(label='Crear copia ahora')
@@ -180,6 +189,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.settings_btn = Gtk.Button(icon_name='emblem-system-symbolic')
         self.settings_btn.add_css_class('rw-ghost')
         self.settings_btn.set_tooltip_text('Ajustes (Ctrl+,)')
+        ui.a11y(self.settings_btn, 'Ajustes')
         self.settings_btn.connect('clicked', lambda *_: self.open_settings())
         header.pack_end(self.settings_btn)
 
@@ -203,6 +213,7 @@ class MainWindow(Adw.ApplicationWindow):
                                   menu_model=menu)
         menu_btn.add_css_class('rw-ghost')
         menu_btn.set_tooltip_text('Menú principal')
+        ui.a11y(menu_btn, 'Menú principal')
         header.pack_end(menu_btn)
         return header
 
@@ -283,9 +294,11 @@ class MainWindow(Adw.ApplicationWindow):
         self.grid_btn = Gtk.ToggleButton(icon_name='view-grid-symbolic')
         self.grid_btn.set_active(True)
         self.grid_btn.set_tooltip_text('Cuadrícula')
+        ui.a11y(self.grid_btn, 'Vista de cuadrícula')
         self.grid_btn.connect('toggled', self._on_view_toggled, 'grid')
         self.list_btn = Gtk.ToggleButton(icon_name='view-list-symbolic')
         self.list_btn.set_tooltip_text('Lista')
+        ui.a11y(self.list_btn, 'Vista de lista')
         self.list_btn.connect('toggled', self._on_view_toggled, 'list')
         self.list_btn.set_group(self.grid_btn)
         toggle.append(self.grid_btn)
@@ -341,6 +354,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.play_btn = Gtk.Button(icon_name='media-playback-start-symbolic')
         self.play_btn.add_css_class('rw-play')
         self.play_btn.set_tooltip_text('Reproducir el paso del tiempo')
+        ui.a11y(self.play_btn, 'Reproducir el paso del tiempo')
         self.play_btn.connect('clicked', lambda *_: self.toggle_play())
         top.append(self.play_btn)
 
@@ -365,7 +379,7 @@ class MainWindow(Adw.ApplicationWindow):
         bar.append(top)
 
         self.timeline = Timeline()
-        self.timeline.connect('seek', lambda _w, index: self.set_snapshot(index))
+        self.timeline.connect('seek', lambda _w, index: self._queue_seek(index))
         bar.append(self.timeline)
         return bar
 
@@ -444,6 +458,23 @@ class MainWindow(Adw.ApplicationWindow):
             toast.connect('button-clicked', lambda *_: action())
         self.toast_overlay.add_toast(toast)
 
+    def _prepare_profile(self):
+        """Mount (if needed) and load the snapshots of the current profile."""
+
+        def work():
+            self.backend.release_mount()
+            return self.backend.ensure_mounted()
+
+        def done(result, error):
+            ok, message = result if result else (False, str(error))
+            if not ok:
+                self.toast(f'No se pudo montar el destino: {message}')
+            self.reload_snapshots()
+            Worker(self.backend.apply_automation, self._automation_done)
+            return False
+
+        Worker(work, done)
+
     def _automation_done(self, created, error):
         if error or created is False:
             self.toast('No hay cron instalado: las copias automáticas no se '
@@ -466,6 +497,10 @@ class MainWindow(Adw.ApplicationWindow):
         return False
 
     def open_wizard(self):
+        existing = getattr(self, '_wizard', None)
+        if existing is not None and existing.get_visible():
+            existing.present()
+            return existing
         from bitgnome.wizard import FirstRunWizard
         wizard = FirstRunWizard(self.app, on_done=self.reload_snapshots)
         self._wizard = wizard
@@ -493,10 +528,13 @@ class MainWindow(Adw.ApplicationWindow):
         self.index = None
         self.rel = ''
         self.selected = None
-        self.reload_snapshots()
+        self._prepare_profile()
 
     # ------------------------------------------------------------ snapshots
     def reload_snapshots(self):
+        self._delta_cache = {}
+        self._delta_pending = set()
+        self._delta_token += 1
         current = self._current_sid()
         self.sids = self.backend.list_snapshots()
         self.chrono = list(reversed(self.sids))
@@ -550,6 +588,129 @@ class MainWindow(Adw.ApplicationWindow):
             self.set_snapshot(0)
         else:
             self.set_snapshot(target)
+
+    def _on_search_changed(self, *_):
+        text = self.search.get_text().strip()
+        self._search_token += 1
+        if self._search_source is not None:
+            GLib.source_remove(self._search_source)
+            self._search_source = None
+        if len(text) < 2:
+            self.render_files()
+            return
+        token = self._search_token
+        self._search_source = GLib.timeout_add(
+            250, lambda: (self._run_search(text, token), False)[1])
+
+    def _run_search(self, text, token):
+        self._search_source = None
+
+        def work():
+            return self._search_tree(text.lower())
+
+        def done(results, error):
+            if error or token != self._search_token:
+                return False
+            self._show_results(results, text)
+            return False
+
+        Worker(work, done)
+
+    def _search_tree(self, query, max_results=200, max_depth=8):
+        sid = self._current_sid()
+        results = []
+        for path, ftype in self._include_roots():
+            if ftype != 0:
+                continue
+            root_rel = path.lstrip('/')
+            try:
+                base = self._sid_path(sid, root_rel) if sid is not None else path
+            except Exception:  # noqa: BLE001
+                continue
+            if not os.path.isdir(base):
+                continue
+            stack = [(base, root_rel, 0)]
+            while stack and len(results) < max_results:
+                dir_path, dir_rel, depth = stack.pop()
+                try:
+                    entries = sorted(os.scandir(dir_path), key=lambda e: e.name)
+                except OSError:
+                    continue
+                for entry in entries:
+                    if len(results) >= max_results:
+                        break
+                    try:
+                        is_dir = entry.is_dir(follow_symlinks=False)
+                    except OSError:
+                        is_dir = False
+                    if query in entry.name.lower():
+                        results.append({'name': entry.name, 'is_dir': is_dir,
+                                        'rel': f'{dir_rel}/{entry.name}',
+                                        'parent_rel': dir_rel, 'size': None,
+                                        'mtime': 0})
+                    if is_dir and depth < max_depth:
+                        stack.append((entry.path, f'{dir_rel}/{entry.name}',
+                                      depth + 1))
+        return results
+
+    def _show_results(self, results, text):
+        while row := self.file_list.get_first_child():
+            self.file_list.remove(row)
+        while child := self.grid.get_first_child():
+            self.grid.remove(child)
+        if not results:
+            self._show_empty('Sin resultados',
+                             f'Nada llamado «{text}» en este punto.')
+            self.section_hint.set_text('Búsqueda en todo el perfil')
+            return
+        self.section_hint.set_text(
+            f'Resultados en todo el perfil ({len(results)})')
+        self.stack.set_visible_child_name('list')
+        for entry in results:
+            row = Gtk.ListBoxRow()
+            box = Gtk.Box(spacing=10)
+            box.set_margin_top(6)
+            box.set_margin_bottom(6)
+            box.set_margin_start(10)
+            box.set_margin_end(10)
+            icon = Gtk.Image(
+                icon_name=_icon_for(entry['name'], entry['is_dir']),
+                pixel_size=18)
+            box.append(icon)
+            labels = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+            labels.set_hexpand(True)
+            name = Gtk.Label(label=entry['name'], xalign=0)
+            name.add_css_class('rw-row-name')
+            path = Gtk.Label(label='/' + entry['parent_rel'], xalign=0)
+            path.add_css_class('rw-row-dim')
+            path.set_ellipsize(Pango.EllipsizeMode.MIDDLE)
+            labels.append(name)
+            labels.append(path)
+            box.append(labels)
+            row.set_child(box)
+            row.bit_entry = entry
+            self.file_list.append(row)
+        self.selected = None
+        self._update_actionbar()
+
+    def _open_result(self, entry):
+        self.search.set_text('')
+        self.rel = entry['parent_rel']
+        self.selected = None
+        self.render_files()
+
+    def _queue_seek(self, index):
+        self._pending_index = index
+        if self._seek_source is None:
+            self._seek_source = GLib.timeout_add(80, self._flush_seek)
+
+    def _flush_seek(self):
+        self._seek_source = None
+        index = self._pending_index
+        self._pending_index = None
+        if index is not None or self.index is not None:
+            self.set_snapshot(index)
+        return False
 
     def set_snapshot(self, index, stop_play=True):
         previous = self.index
@@ -623,6 +784,8 @@ class MainWindow(Adw.ApplicationWindow):
         except Exception:  # noqa: BLE001
             includes = []
         failed = bool(getattr(self._last_sid(), 'failed', False)) if count else False
+        failed_count = sum(1 for sid in self.chrono
+                           if getattr(sid, 'failed', False))
 
         if count == 0:
             self.hero_title.set_text('Sin copias todavía')
@@ -638,9 +801,11 @@ class MainWindow(Adw.ApplicationWindow):
             self.ring_state = 'warn'
         else:
             self.hero_title.set_text('Todo protegido')
+            extra = (f' · {failed_count} con errores' if failed_count else '')
             self.hero_sub.set_text(
                 f'Última copia {self._last_copy_text()} · {self._next_copy_text()}'
-                f'\n{len(includes)} carpetas vigiladas · {count} puntos en el tiempo')
+                f'\n{len(includes)} carpetas vigiladas · {count} puntos en '
+                f'el tiempo{extra}')
             self.ring_check.set_from_icon_name('object-select-symbolic')
             self.ring_state = 'ok'
 
@@ -776,7 +941,26 @@ class MainWindow(Adw.ApplicationWindow):
         out.sort(key=lambda e: (not e['is_dir'], e['name'].lower()))
         return out
 
+    def _delta_key(self):
+        sid = self._current_sid()
+        if sid is None:
+            return None
+        try:
+            return (sid.path(), self.rel)
+        except Exception:  # noqa: BLE001
+            return None
+
     def _deltas(self):
+        """Cached badges for the current point and folder."""
+        key = self._delta_key()
+        if key is None:
+            return set(), set()
+        cached = self._delta_cache.get(key)
+        if cached is not None:
+            return cached
+        return self._compute_deltas()
+
+    def _compute_deltas(self):
         """Names that changed or disappeared after the selected snapshot."""
         sid = self._current_sid()
         if sid is None or not self.rel:
@@ -809,7 +993,34 @@ class MainWindow(Adw.ApplicationWindow):
                     changed.add(name)
             except OSError:
                 pass
+        key = self._delta_key()
+        if key is not None:
+            self._delta_cache[key] = (changed, gone)
         return changed, gone
+
+    def _schedule_deltas(self, entries):
+        """Scan a big folder in a worker instead of blocking the UI."""
+        key = self._delta_key()
+        if key is None or key in self._delta_cache or not entries:
+            return
+        if len(entries) < 600 or key in self._delta_pending:
+            return
+        token = self._delta_token
+        self._delta_pending.add(key)
+
+        def work():
+            return self._compute_deltas()
+
+        def done(result, error):
+            self._delta_pending.discard(key)
+            if error or token != self._delta_token:
+                return False
+            if key not in self._delta_cache:
+                self._delta_cache[key] = result
+                self.render_files()
+            return False
+
+        Worker(work, done)
 
     def _crumb_parts(self):
         """[(label, rel)] for the include root we are under, if any."""
@@ -872,9 +1083,12 @@ class MainWindow(Adw.ApplicationWindow):
             entries = self._root_entries()
 
         query = self.search.get_text().strip().lower()
+        if len(query) >= 2:
+            return
         if query:
             entries = [e for e in entries if query in e['name'].lower()]
         changed, gone = self._deltas()
+        self._schedule_deltas(entries)
 
         if not entries:
             self._show_empty('Nada por aquí',
@@ -1023,7 +1237,11 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _on_list_activated(self, _list, row):
         if hasattr(row, 'bit_entry'):
-            self._activate(row.bit_entry)
+            entry = row.bit_entry
+            if entry.get('parent_rel') is not None:
+                self._open_result(entry)
+            else:
+                self._activate(entry)
 
     def _activate(self, entry):
         if entry['is_dir']:
@@ -1182,12 +1400,26 @@ class MainWindow(Adw.ApplicationWindow):
 
         Worker(self.backend.take_snapshot, done)
 
+    def _op_started(self, label):
+        self._busy_ops += 1
+        self._busy_label = label
+
+    def _op_finished(self):
+        self._busy_ops = max(0, self._busy_ops - 1)
+        if self._busy_ops == 0 and self._quit_when_done \
+                and not self._snap_worker_running:
+            GLib.idle_add(self._close_now)
+
     def _on_close_request(self, *_):
         if self._closing_after_foreign_stop:
+            self.backend.release_mount()
             return False
         if not self._snap_worker_running:
+            if self._busy_ops:
+                return self._operation_close()
             if self.backend.busy_backup:
                 return self._foreign_backup_close()
+            self.backend.release_mount()
             return False
         if self._close_dialog is not None:
             return True
@@ -1237,6 +1469,47 @@ class MainWindow(Adw.ApplicationWindow):
         dialog.present()
         return True
 
+    def _operation_close(self):
+        if self._close_dialog is not None:
+            return True
+        dialog = Adw.MessageDialog(
+            transient_for=self, modal=True,
+            heading='Hay una operación en curso',
+            body=f'Se está ejecutando una {self._busy_label}. Si sales ahora '
+                 'se quedará a medias.')
+        dialog.add_response('cancel', 'Cancelar')
+        dialog.add_response('wait', 'Esperar')
+        dialog.add_response('stop', 'Detener y salir')
+        dialog.set_response_appearance('stop',
+                                       Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.set_default_response('wait')
+        dialog.set_close_response('cancel')
+
+        def on_response(dlg, response):
+            self._close_dialog = None
+            dlg.destroy()
+            if response == 'cancel':
+                self._quit_when_done = False
+                return
+            self._quit_when_done = True
+            if response == 'stop':
+                import signal
+                self.backend.stop_snapshot()
+                GLib.timeout_add_seconds(6, self._escalate_operation)
+            if not self._busy_ops and not self._snap_worker_running:
+                GLib.idle_add(self._close_now)
+
+        dialog.connect('response', on_response)
+        self._close_dialog = dialog
+        dialog.present()
+        return True
+
+    def _escalate_operation(self):
+        if self._busy_ops:
+            import signal
+            self.backend.stop_snapshot(signal.SIGKILL)
+        return False
+
     def _wait_foreign_and_close(self, tries=0):
         if not self.backend.busy_backup or tries >= 24:
             self._closing_after_foreign_stop = True
@@ -1264,6 +1537,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _close_now(self):
         self._quit_when_done = False
+        self.backend.release_mount()
         self.close()
         return False
 
@@ -1285,6 +1559,7 @@ class MainWindow(Adw.ApplicationWindow):
     def _on_restore_confirmed(self, sid, rel, restore_to, delete, backup,
                               only_new):
         self.toast('Restauración iniciada…')
+        self._op_started('restauración')
 
         def work():
             self.backend.restore(sid, rel, restore_to=restore_to,
@@ -1292,6 +1567,7 @@ class MainWindow(Adw.ApplicationWindow):
                                  only_new=only_new)
 
         def done(_result, error):
+            self._op_finished()
             if error:
                 self.toast(f'Error al restaurar: {error}')
             else:
@@ -1389,10 +1665,12 @@ class MainWindow(Adw.ApplicationWindow):
         if response != 'delete':
             return
 
+        self._op_started('eliminación')
         def work():
             self.backend.delete_snapshot(sid)
 
         def done(_result, error):
+            self._op_finished()
             if error:
                 self.toast(f'Error al eliminar: {error}')
                 return
@@ -1442,7 +1720,12 @@ class MainWindow(Adw.ApplicationWindow):
         if self.index + 1 >= len(self.chrono):
             self._stop_play()
             return False
-        self.set_snapshot(self.index + 1, stop_play=False)
+        try:
+            self.set_snapshot(self.index + 1, stop_play=False)
+        except Exception as exc:  # noqa: BLE001
+            self._stop_play()
+            self.toast(f'No se pudo reproducir el historial: {exc}')
+            return False
         return True
 
     def _stop_play(self):

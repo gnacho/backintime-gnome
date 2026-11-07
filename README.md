@@ -70,7 +70,8 @@ It installs `/usr/bin/backintime-gnome` and the *Back In Time (GNOME)* menu entr
 ```
 
 `--first-run` opens the wizard even when the profile already has folders and a
-destination. `--help` prints the launcher options. The wizard also opens by
+destination, including when an instance is already running. `--help` prints the
+launcher options. The wizard also opens by
 itself when the profile has no folders or no destination yet.
 
 If the engine is not installed in the standard path:
@@ -97,8 +98,12 @@ that layout is **Rewind**; the package and the repository keep the
   point you are visiting and marks the entries that changed or disappeared in
   the next snapshot. The timeline at the bottom moves between points, has a
   play button to walk the history and "Back to the present".
-- **Browser**: grid (default) or list, breadcrumbs, search, change badges and a
-  floating action bar with restore, compare and stop copying.
+- **Browser**: grid (default) or list, breadcrumbs, change badges and a floating
+  action bar with restore, compare and stop copying. Badges are cached per point
+  and folder and computed off the main thread for big directories.
+- **Search**: from two characters the search box walks the whole point in time
+  in a worker and lists matches with their folder, instead of filtering only the
+  folder in view.
 - **Take snapshot**: runs `Snapshots.backup(force=True)` in a thread with a
   progress dialog that reads `takeSnapshotMessage()`. **Parar la copia** kills
   the rsync child; the core marks the partial snapshot as failed, so the window
@@ -113,6 +118,9 @@ that layout is **Rewind**; the package and the repository keep the
 - **Log**: viewer for `takesnapshot_N.log` with Info/Warning/Error filter.
 - **Compare**: built-in unified diff between the file in the snapshot and the
   previous one (double click on a file while browsing a point in time).
+- **Mounts and profiles**: SSH and encrypted destinations stay mounted while the
+  app is open, so browsing a point in time works; the selected profile is
+  remembered across restarts in `~/.config/backintime-gnome/state.ini`.
 - **Settings sheet**: watched folders, frequency, failure notifications,
   destination and retention on top; excludes, SSH, smart removal, rsync
   options, log level and profiles folded into expanders. The complete *Manage

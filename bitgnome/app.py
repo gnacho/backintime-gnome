@@ -14,7 +14,7 @@ from bitgnome.backend import Backend  # noqa: E402
 class BackInTimeApp(Adw.Application):
     def __init__(self):
         super().__init__(application_id=APP_ID,
-                         flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
+                         flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
         self.backend = Backend()
         self._add_action('quit', self._quit, ['<Control>q'])
         self._add_action('preferences', lambda *_: self._win('open_settings'),
@@ -57,6 +57,15 @@ class BackInTimeApp(Adw.Application):
         from bitgnome.window import MainWindow
         win = self.get_active_window() or MainWindow(self)
         win.present()
+
+    def do_command_line(self, command_line):
+        args = command_line.get_arguments() or []
+        self.activate()
+        if '--first-run' in args:
+            win = self.get_active_window()
+            if win is not None:
+                win.open_wizard()
+        return 0
 
     def _preferences(self, *_):
         self._win('open_settings')
@@ -146,9 +155,10 @@ def main():
 
     force_wizard = '--first-run' in flags
     # Back In Time's own argument parser reads sys.argv while the config is
-    # loaded, so GUI flags must be gone before the app is built.
+    # loaded, so GUI flags must be gone before the app is built. The flag is
+    # still passed to GApplication so a running instance receives it.
     sys.argv = [argv[0]] + [flag for flag in flags if flag != '--first-run']
 
     app = BackInTimeApp()
     app.force_wizard = force_wizard
-    return app.run(sys.argv)
+    return app.run([argv[0]] + flags)

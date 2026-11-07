@@ -6,6 +6,18 @@ import gi
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk, Pango  # noqa: E402
 
+def a11y(widget, label):
+    """Accessible name, with the tooltip as a fallback on GTK 4.8."""
+    if not widget.get_tooltip_text():
+        widget.set_tooltip_text(label)
+    try:
+        prop = getattr(Gtk, 'AccessibleProperty', None)
+        if prop is not None:
+            widget.update_property([prop.LABEL], [label])
+    except Exception:  # noqa: BLE001
+        pass
+
+
 MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
           'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 DAYS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
@@ -62,6 +74,7 @@ def chip(label, tooltip, on_close):
     close = Gtk.Button(icon_name='window-close-symbolic')
     close.add_css_class('rw-chip-close')
     close.set_tooltip_text('Quitar')
+    a11y(close, f'Quitar {label}')
     close.connect('clicked', lambda *_: on_close())
     box.append(text)
     box.append(close)
