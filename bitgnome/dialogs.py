@@ -34,7 +34,7 @@ class RestoreDialog(Adw.Window):
         img.add_css_class('accent')
         head.append(img)
         labels = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        title = Gtk.Label(label=f'Restaurar «{os.path.basename(rel)}»', xalign=0)
+        title = Gtk.Label(label=f'Restaurar «{os.path.basename(rel_path)}»', xalign=0)
         title.add_css_class('title-3')
         try:
             snap_name = sid.displayName
@@ -51,7 +51,7 @@ class RestoreDialog(Adw.Window):
         self.orig_check = Gtk.CheckButton(label='Ubicación original')
         self.orig_check.set_active(not other_location)
         orig_row = Adw.ActionRow(title='Ubicación original',
-                                 subtitle='/' + rel.lstrip('/'))
+                                 subtitle=rel_path if rel_path.startswith('/') else '/' + rel_path)
         orig_row.add_prefix(self.orig_check)
         orig_row.set_activatable_widget(self.orig_check)
         dest_group.add(orig_row)
