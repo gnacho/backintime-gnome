@@ -69,7 +69,7 @@ class BackInTimeApp(Adw.Application):
         dialog = Adw.AboutWindow(
             transient_for=self.get_active_window(),
             application_name='Rewind',
-            application_icon='camera-photo-symbolic',
+            application_icon='rewind',
             version=__version__,
             developer_name='Equipo de Back In Time · front GNOME',
             license_type=Gtk.License.GPL_2_0,
@@ -103,8 +103,12 @@ class BackInTimeApp(Adw.Application):
               <property name="accelerator">&lt;Control&gt;comma</property>
             </object></child>
             <child><object class="GtkShortcutsShortcut">
-              <property name="title">Punto anterior / siguiente</property>
-              <property name="accelerator">Left / Right</property>
+              <property name="title">Punto anterior</property>
+              <property name="accelerator">Left</property>
+            </object></child>
+            <child><object class="GtkShortcutsShortcut">
+              <property name="title">Punto siguiente</property>
+              <property name="accelerator">Right</property>
             </object></child>
             <child><object class="GtkShortcutsShortcut">
               <property name="title">Volver al presente</property>

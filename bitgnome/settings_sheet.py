@@ -16,6 +16,18 @@ from gi.repository import Adw, Gtk, Pango  # noqa: E402
 from . import backend as _backend  # noqa: E402
 from . import ui  # noqa: E402
 
+MODE_LABELS = {
+    'DISABLED': 'Manual', 'AT_EVERY_BOOT': 'Al arrancar',
+    'MINUTES_5': 'Cada 5 minutos', 'MINUTES_10': 'Cada 10 minutos',
+    'MINUTES_30': 'Cada 30 minutos', 'HOUR': 'Cada hora',
+    'HOURS_2': 'Cada 2 horas', 'HOURS_4': 'Cada 4 horas',
+    'HOURS_6': 'Cada 6 horas', 'HOURS_12': 'Cada 12 horas',
+    'CUSTOM_HOUR': 'Horas personalizadas', 'DAY': 'Cada día',
+    'REPEATEDLY': 'Repetidamente (anacron)', 'UDEV': 'Al conectar la unidad',
+    'WEEK': 'Cada semana', 'MONTH': 'Cada mes', 'YEAR': 'Cada año',
+}
+UNIT_NAMES = {'HOUR': 'horas', 'DAY': 'días', 'WEEK': 'semanas',
+              'MONTH': 'meses', 'YEAR': 'años'}
 SCHEDULE_MODES = [
     ('hour', 'Cada hora'),
     ('day', 'Cada día'),
@@ -51,6 +63,7 @@ class SettingsSheet(Adw.Window):
         scrolled = Gtk.ScrolledWindow(vexpand=True)
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         root.append(scrolled)
+        self._error_label = None
         self.body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.body.set_margin_top(6)
         self.body.set_margin_bottom(22)
@@ -68,12 +81,20 @@ class SettingsSheet(Adw.Window):
         self._build_destination()
         self._build_retention()
         self._build_advanced()
+        self._error_label = Gtk.Label(xalign=0, wrap=True)
+        self._error_label.add_css_class('rw-srow-sub')
+        self._error_label.set_margin_top(10)
+        self.body.append(self._error_label)
 
     # ---------------------------------------------------------------- save
     def _save(self):
-        ui.save(self.cfg)
+        ok = ui.save(self.cfg)
+        if self._error_label is not None:
+            self._error_label.set_text('' if ok
+                                       else 'No se pudo guardar la configuración')
         if self.on_change:
             self.on_change()
+        return ok
 
     # ------------------------------------------------------------- folders
     def _build_folders(self):
@@ -122,24 +143,32 @@ class SettingsSheet(Adw.Window):
         self._fill_folders()
 
     # ------------------------------------------------------------- schedule
-    def _current_schedule(self):
+    SCHEDULE_KEYS = {'HOUR': 'hour', 'DAY': 'day', 'WEEK': 'week',
+                     'DISABLED': 'none'}
+
+    def _schedule_mode_name(self):
         try:
-            mode = str(self.cfg.scheduleMode())
+            mode = self.cfg.scheduleMode()
         except Exception:  # noqa: BLE001
-            return 'none'
-        for key in ('hour', 'day', 'week'):
-            if key in mode.lower():
-                return key
-        return 'none'
+            return ''
+        return getattr(mode, 'name', str(mode).split('.')[-1])
+
+    def _current_schedule(self):
+        return self.SCHEDULE_KEYS.get(self._schedule_mode_name(), 'none')
 
     def _build_schedule(self):
         self.body.append(ui.group_title('Cada cuánto'))
         current = self._current_schedule()
+        mode_name = self._schedule_mode_name()
+        known = mode_name in self.SCHEDULE_KEYS
         control = ui.segmented(
-            [(key, label) for key, label in SCHEDULE_MODES], current,
+            [(key, label) for key, label in SCHEDULE_MODES],
+            current if known else '__none__',
             self._on_schedule_changed)
-        self.body.append(ui.row(
-            'Frecuencia', 'Cuándo crear puntos de restauración', control))
+        subtitle = 'Cuándo crear puntos de restauración'
+        if not known and mode_name:
+            subtitle = f'Ahora: {MODE_LABELS.get(mode_name, mode_name)}'
+        self.body.append(ui.row('Frecuencia', subtitle, control))
 
         switch = Gtk.Switch(active=self._get(self.cfg.notify, True),
                             valign=Gtk.Align.CENTER)
@@ -160,6 +189,7 @@ class SettingsSheet(Adw.Window):
         try:
             self.cfg.setScheduleMode(mode)
             self._save()
+            _backend.Worker(self.backend.apply_automation, lambda *_: None)
         except Exception:  # noqa: BLE001
             pass
 
@@ -179,7 +209,7 @@ class SettingsSheet(Adw.Window):
     def _change_destination(self, _btn):
         def on_path(path):
             try:
-                self.cfg.set_snapshots_path(path)
+                self.backend.set_destination_path(path)
                 self._save()
                 self.destination_label.set_text(path)
             except Exception:  # noqa: BLE001
@@ -196,13 +226,15 @@ class SettingsSheet(Adw.Window):
             current = 'forever'
         elif unit_name == 'YEAR' and value == 2:
             current = '2y'
+        elif unit_name == 'MONTH' and value == 6:
+            current = '6m'
         else:
             current = 'custom'
         options = [('6m', '6 meses'), ('2y', '2 años'), ('forever', 'Siempre')]
         control = ui.segmented(options, current, self._on_retention_changed)
         subtitle = 'Las más antiguas se eliminan solas para hacer hueco'
         if current == 'custom':
-            subtitle = f'Ahora: {value} {str(unit_name).lower()}'
+            subtitle = f'Ahora: {value} {UNIT_NAMES.get(unit_name, "")}'.strip()
         self.body.append(ui.row('Conservar copias durante', subtitle, control))
 
     def _retention(self):
@@ -419,7 +451,7 @@ class SettingsSheet(Adw.Window):
         current = self.backend.current_profile()
         for pid, name in self.backend.profiles():
             btn = Gtk.ToggleButton(label=name)
-            btn.add_css_class('rw-choice')
+            btn.add_css_class('rw-soft')
             btn.set_active(pid == current)
             btn.connect('clicked', self._on_profile_chosen, pid)
             box.append(btn)

@@ -216,7 +216,10 @@ class DiffDialog(Adw.Window):
         old_path = None
         if prev_sid is not None:
             try:
-                rel = os.path.relpath(abs_path, sid.pathBackup(''))
+                # 2.0 raises on an empty path argument
+                base = sid.pathBackup() if hasattr(sid, 'pathBackup') else ''
+                rel = os.path.relpath(abs_path, base) if base else \
+                    abs_path.lstrip('/')
                 old_path = prev_sid.pathBackup(rel)
             except Exception:  # noqa: BLE001
                 old_path = None

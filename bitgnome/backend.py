@@ -162,6 +162,8 @@ class Backend:
     def __init__(self):
         self.cfg = None
         self.error = None
+        self.busy_backup = False      # shared with the wizard
+        self._snapshots = None        # cached: Snapshots() costs ~260 ms
         if not available():
             self.error = _IMPORT_ERROR
             return
@@ -213,6 +215,56 @@ class Backend:
 
     def set_current_profile(self, pid):
         self.cfg.setCurrentProfile(pid)
+        self._snapshots = None
+
+    def _snapshots_obj(self):
+        if self._snapshots is None:
+            self._snapshots = snapshots.Snapshots(self.cfg)
+        return self._snapshots
+
+    def profile_mode(self):
+        try:
+            return str(self.cfg.snapshotsMode())
+        except Exception:                 # noqa: BLE001
+            return 'local'
+
+    def set_destination_path(self, path):
+        """Write the destination of the *current* mode.
+
+        ``set_snapshots_path`` only covers local profiles; SSH and encrypted
+        profiles keep their path in different settings.
+        """
+        mode = self.profile_mode()
+        if 'ssh' in mode:
+            self.cfg.setSshSnapshotsPath(path)
+        elif 'gocryptfs' in mode:
+            setter = getattr(self.cfg, 'setLocalGocryptfsPath', None)
+            if setter is not None:
+                setter(path, self.current_profile())
+            else:
+                self.cfg.set_snapshots_path(path)
+        elif 'encfs' in mode:
+            setter = getattr(self.cfg, 'setLocalEncfsPath', None)
+            if setter is not None:
+                setter(path)
+            else:
+                self.cfg.set_snapshots_path(path)
+        else:
+            self.cfg.set_snapshots_path(path)
+
+    def apply_automation(self):
+        """Install or refresh the cron/udev entry for the schedule.
+
+        The Qt client does this on startup; without it a schedule chosen in
+        the GUI is never executed.
+        """
+        if self.cfg is None:
+            return False
+        try:
+            self.cfg.setup_automation()
+            return True
+        except Exception:                 # noqa: BLE001
+            return False
 
     @staticmethod
     def _clean_path(path):
@@ -324,28 +376,39 @@ class Backend:
                 stack.append(child)
         return out
 
+    @staticmethod
+    def _argv0(pid):
+        try:
+            with open(f'/proc/{pid}/cmdline', 'rb') as fh:
+                argv0 = fh.read().split(b'\0', 1)[0].decode(errors='replace')
+        except OSError:
+            return ''
+        return os.path.basename(argv0)
+
     def stop_snapshot(self, sig=None):
-        """Kill the rsync (and helpers) spawned by an in-process backup.
+        """Kill the rsync (and its ssh helper) spawned by a backup.
 
         The core reacts to a non-zero rsync exit by removing the incomplete
-        snapshot, so this is a clean cancel. Returns the signalled PIDs.
+        snapshot, so this is a clean cancel. Only rsync/ssh are signalled:
+        killing every descendant would also kill the gocryptfs mount and the
+        password cache, leaving the profile unusable. Returns the PIDs.
         """
         import signal
         sig = sig or signal.SIGTERM
         signalled = []
         for pid in self.descendant_pids():
+            if self._argv0(pid) not in ('rsync', 'ssh'):
+                continue
             try:
                 os.kill(pid, sig)
                 signalled.append(pid)
-            except ProcessLookupError:
-                continue
-            except PermissionError:
+            except (ProcessLookupError, PermissionError):
                 continue
         return signalled
 
     def take_snapshot_message(self):
         try:
-            return snapshots.Snapshots(self.cfg).takeSnapshotMessage()
+            return self._snapshots_obj().takeSnapshotMessage()
         except Exception:                 # noqa: BLE001
             return None
 

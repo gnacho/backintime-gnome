@@ -83,6 +83,7 @@ class MainWindow(Adw.ApplicationWindow):
             self._show_backend_error(self.backend.error)
         else:
             self.reload_snapshots()
+            Worker(self.backend.apply_automation, lambda *_: None)
             GLib.idle_add(self._maybe_wizard)
 
     # ------------------------------------------------------------------ UI
@@ -477,8 +478,8 @@ class MainWindow(Adw.ApplicationWindow):
             else Adw.ColorScheme.FORCE_DARK)
 
     def _on_settings_changed(self):
-        self._update_hero()
-        self.render_files()
+        self.index = None
+        self.reload_snapshots()
 
     # ------------------------------------------------------------ snapshots
     def reload_snapshots(self):
@@ -510,7 +511,8 @@ class MainWindow(Adw.ApplicationWindow):
         if total == 0:
             return
         if self.index is None:
-            self.set_snapshot(total - 1)
+            if delta < 0:
+                self.set_snapshot(total - 1)
             return
         target = self.index + delta
         if target >= total:
@@ -520,16 +522,18 @@ class MainWindow(Adw.ApplicationWindow):
         else:
             self.set_snapshot(target)
 
-    def set_snapshot(self, index):
-        if index is None:
-            self.index = None
-        elif not self.chrono:
-            self.index = None
+    def set_snapshot(self, index, stop_play=True):
+        previous = self.index
+        if index is None or not self.chrono:
+            target = None
         else:
-            self.index = max(0, min(int(index), len(self.chrono) - 1))
-        self.rel = ''
-        self.selected = None
-        self._stop_play()
+            target = max(0, min(int(index), len(self.chrono) - 1))
+        if target != previous:
+            self.rel = ''
+            self.selected = None
+        if stop_play:
+            self._stop_play()
+        self.index = target
         self._apply_mode()
         self.render_files()
 
@@ -659,7 +663,10 @@ class MainWindow(Adw.ApplicationWindow):
         names = {'HOUR': ('hora', 'horas'), 'DAY': ('día', 'días'),
                  'WEEK': ('semana', 'semanas'), 'MONTH': ('mes', 'meses'),
                  'YEAR': ('año', 'años')}
-        unit_name = getattr(unit, 'name', 'DAY')
+        unit_name = getattr(unit, 'name', None)
+        if unit_name is None:
+            unit_name = {10: 'HOUR', 20: 'DAY', 30: 'WEEK', 40: 'MONTH',
+                         80: 'YEAR'}.get(unit, 'DAY')
         singular, plural = names.get(unit_name, ('día', 'días'))
         label = singular if value == 1 else plural
         return f'Retención · <b>{value} {label}</b>'
@@ -850,6 +857,10 @@ class MainWindow(Adw.ApplicationWindow):
         self._update_actionbar()
 
     def _show_empty(self, title, hint):
+        while child := self.grid.get_first_child():
+            self.grid.remove(child)
+        while row := self.file_list.get_first_child():
+            self.file_list.remove(row)
         self.empty_title.set_text(title)
         self.empty_hint.set_text(hint)
         self.stack.set_visible_child_name('empty')
@@ -1002,13 +1013,14 @@ class MainWindow(Adw.ApplicationWindow):
 
     # -------------------------------------------------------------- actions
     def take_snapshot(self):
-        if self._snap_worker_running:
+        if self._snap_worker_running or self.backend.busy_backup:
             self.toast('Ya hay una instantánea en curso')
             return
         if self.backend.error:
             self.toast('Núcleo no disponible')
             return
         self._snap_worker_running = True
+        self.backend.busy_backup = True
         self._snapshots_before_take = len(self.chrono)
         self.snap_btn.set_sensitive(False)
         self.snap_btn.set_label('Copiando…')
@@ -1082,17 +1094,22 @@ class MainWindow(Adw.ApplicationWindow):
 
         def poll():
             if state['background'] or state['stopped']:
+                self._snap_poll_source = None
                 return False
             message = self.backend.take_snapshot_message()
             if message and message[1]:
                 stage.set_text(message[1][-140:])
             return True
 
-        GLib.timeout_add(300, poll)
+        self._snap_poll_source = GLib.timeout_add(400, poll)
 
         def done(error_message, error):
             self._snap_worker_running = False
+            self.backend.busy_backup = False
             self._request_stop = None
+            if self._snap_poll_source is not None:
+                GLib.source_remove(self._snap_poll_source)
+                self._snap_poll_source = None
             self.snap_btn.set_sensitive(True)
             self.snap_btn.set_label('Crear copia ahora')
             dialog.close()
@@ -1213,7 +1230,10 @@ class MainWindow(Adw.ApplicationWindow):
         patterns.append(absolute)
         try:
             self.cfg.setExclude(patterns)
-            ui.save(self.cfg)
+            if not ui.save(self.cfg):
+                self.cfg.setExclude(patterns[:-1])
+                self.toast('No se pudo guardar la exclusión')
+                return
         except Exception as exc:  # noqa: BLE001
             self.toast(f'No se pudo excluir: {exc}')
             return
@@ -1270,23 +1290,22 @@ class MainWindow(Adw.ApplicationWindow):
         from bitgnome.dialogs import LogViewDialog
         LogViewDialog(self, self.backend).present()
 
-    def show_diff(self, filename=None):
+    def show_diff(self, rel=None):
         sid = self._current_sid()
         if sid is None:
             self.toast('«Ahora» no tiene con qué comparar: elige un punto')
             return
-        if filename:
-            rel = f'{self.rel}/{filename}' if self.rel else filename
-        elif self.selected:
+        if rel is None:
+            if not self.selected:
+                self.toast('Selecciona un archivo para comparar')
+                return
             if self.selected['is_dir']:
                 self.toast('La comparación funciona con archivos, no carpetas')
                 return
             rel = self.selected['rel']
-        else:
-            self.toast('Selecciona un archivo para comparar')
-            return
+        older = self.chrono[self.index - 1] if self.index else None
         from bitgnome.dialogs import DiffDialog
-        DiffDialog(self, sid, '/' + rel).present()
+        DiffDialog(self, sid, '/' + rel, older).present()
 
     # ---------------------------------------------------------------- play
     def toggle_play(self):
@@ -1307,7 +1326,7 @@ class MainWindow(Adw.ApplicationWindow):
         if self.index + 1 >= len(self.chrono):
             self._stop_play()
             return False
-        self.set_snapshot(self.index + 1)
+        self.set_snapshot(self.index + 1, stop_play=False)
         return True
 
     def _stop_play(self):
