@@ -3,13 +3,25 @@
 Native GNOME frontend for [Back In Time](https://github.com/bit-team/backintime).
 It does not reimplement the engine: it imports `common/` from Back In Time and
 drives `config.Config`, `snapshots.Snapshots` and `snapshotlog.SnapshotLog`
-exactly like the Qt client does. Tested against **Back In Time 1.6.2** (the
-`dev` 2.0 branch is halfway through a refactor and does not start without prior
-configuration).
+exactly like the Qt client does.
+
+## Compatibility
+
+Both core series work:
+
+| Core | State | Encrypted profiles |
+|---|---|---|
+| 1.6.x | stable, tested against 1.6.2 | EncFS |
+| 2.0.x | release candidate, tested against 2.0.0-rc2 | Gocryptfs |
+
+The frontend detects the core at startup: it exposes the snapshot modes the core
+offers, mounts the destination through the 2.0 mount manager when it exists, and
+loads the config with the core's own CLI helper so that 2.0 can migrate profiles
+from older versions. Gocryptfs profiles need the `gocryptfs` binary installed.
 
 ## Requirements
 
-- Python 3.11+ with PyGObject (`python3-gi`)
+- Python 3.11+ with PyGObject (`python3-gi`). Back In Time 2.0 needs Python 3.13+
 - GTK 4.8+ and libadwaita 1.2+ (`gir1.2-gtk-4.0`, `libadwaita-1-0`, `gir1.2-adw-1`)
 - `backintime-common` installed (recommended), or a checkout of the repo
 
@@ -26,6 +38,13 @@ makepkg -si
 ```
 
 It installs `/usr/bin/backintime-gnome` and the *Back In Time (GNOME)* menu entry.
+
+`backintime-cli` in the AUR still ships 1.6.2. To run against 2.0.x, download the
+release candidate and point the frontend at its `common/` directory:
+
+```bash
+BACKINTIME_COMMON=/path/to/backintime-2.0.0-rc2/common backintime-gnome
+```
 
 ## Run
 
