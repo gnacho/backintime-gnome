@@ -69,6 +69,11 @@ It installs `/usr/bin/backintime-gnome` and the *Back In Time (GNOME)* menu entr
 ./backintime-gnome
 ```
 
+`--first-run` opens the wizard even when the profile already has folders and a
+destination, including when an instance is already running. `--help` prints the
+launcher options. The wizard also opens by
+itself when the profile has no folders or no destination yet.
+
 If the engine is not installed in the standard path:
 
 ```bash
@@ -79,40 +84,67 @@ Search order for `common/`: `$BACKINTIME_COMMON`,
 `~/.local/share/backintime-gnome/common`, `/usr/share/backintime/common`,
 `/usr/local/share/backintime/common`, and `../backintime/common` (development).
 
-## Features (milestone 1)
+## Features
 
-- **Main window**: real snapshot list grouped by age (Today/Yesterday/This
-  week/Older) with a "Now" entry; browser for the content of each snapshot or
-  the current system, with breadcrumbs, up-level and search.
-- **Changes only**: compares the selected snapshot with the previous one
-  (New/Modified badges).
+The interface is built around two questions: *is everything protected right
+now?* and *what did my files look like three days ago?*. The design name for
+that layout is **Rewind**; the package and the repository keep the
+`backintime-gnome` name.
+
+- **Present mode**: status card with the last and next snapshot, number of
+  watched folders, points in time, free space on the destination and the
+  retention setting. A ring turns amber when the last snapshot failed.
+- **Time mode**: the window switches to a dark theme, shows the date of the
+  point you are visiting and marks the entries that changed or disappeared in
+  the next snapshot. The timeline at the bottom moves between points, has a
+  play button to walk the history and "Back to the present".
+- **Browser**: grid (default) or list, breadcrumbs, change badges and a floating
+  action bar with restore, compare and stop copying. Badges are cached per point
+  and folder and computed off the main thread for big directories.
+- **Search**: from two characters the search box walks the whole point in time
+  in a worker and lists matches with their folder, instead of filtering only the
+  folder in view. Paths are shown relative to the copied folder
+  (`Documentos/informe.odt`), never the full `/home/...` path.
 - **Take snapshot**: runs `Snapshots.backup(force=True)` in a thread with a
-  progress dialog that reads `takeSnapshotMessage()`; toast on completion and
-  list reload. Ctrl+S.
+  progress dialog that reads `takeSnapshotMessage()`. **Parar la copia** kills
+  the rsync child; the core marks the partial snapshot as failed, so the window
+  discards it (nothing is kept). **Seguir en segundo plano** closes the dialog
+  and keeps working, with a toast when it finishes. Closing the window or
+  pressing Ctrl+Q during a backup asks first: wait until it finishes, stop it
+  and quit, or cancel the close. Ctrl+S.
 - **Restore**: dialog with original location or another folder, `.backup.YYYYMMDD`
   copy, `--update` and removal of new files; calls the real
   `Snapshots.restore()`. Ctrl+R.
 - **Delete snapshot**: destructive confirmation + `Snapshots.remove()`.
 - **Log**: viewer for `takesnapshot_N.log` with Info/Warning/Error filter.
 - **Compare**: built-in unified diff between the file in the snapshot and the
-  previous one (double click on a file while browsing a snapshot).
-- **Profiles**: header bar selector (switches the real `currentProfile`) and a
-  *Manage profiles* window with the six pages of the Qt client:
-  General (Local/SSH/encrypted mode, destination, SSH, cron/udev schedule),
-  Include and Exclude (editable lists with a real file chooser),
-  Auto-remove (age + smart removal), Options and Advanced.
-  Everything writes through the `config.Config` setters and `cfg.save()`.
-- Light/dark theme, F9 for the sidebar, shortcuts (Ctrl+, Ctrl+S Ctrl+R Ctrl+Q).
+  previous one (double click on a file while browsing a point in time).
+- **Mounts and profiles**: SSH and encrypted destinations stay mounted while the
+  app is open, so browsing a point in time works; the selected profile is
+  remembered across restarts in `~/.config/backintime-gnome/state.ini`.
+- **Settings sheet**: watched folders, frequency, failure notifications,
+  destination and retention on top; excludes, SSH, smart removal, rsync
+  options, log level and profiles folded into expanders. The complete *Manage
+  profiles* window (encryption modes, udev, keys, custom schedules) stays one
+  click away, so no option is lost.
+- **First-run wizard**: folders, frequency, destination, summary and the first
+  backup with live progress.
+- Light/dark theme follows the desktop in present mode; time mode is always
+  dark. Shortcuts: Ctrl+, Ctrl+S Ctrl+R Ctrl+Q, Left/Right to move between
+  points and Escape to go back to the present.
 
 ## Screenshots
 
 ![Main window](capturas/ventana-principal.png)
 
-![Preferences](capturas/preferencias.png)
+![Time travel](capturas/viaje-en-el-tiempo.png)
+
+![Search](capturas/busqueda.png)
+
+![Settings](capturas/ajustes.png)
 
 ## Roadmap
 
-- First-run wizard (restore the config from an old backup).
 - Diff view with a configurable external tool (`meld`).
 - Real progress bar during restore.
 - Meson/Flatpak packaging and translations (reuse `common/po`).

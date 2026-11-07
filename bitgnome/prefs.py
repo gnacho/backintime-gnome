@@ -11,6 +11,7 @@ gi.require_version('Adw', '1')
 from gi.repository import Adw, Gtk  # noqa: E402
 
 from . import backend as _backend  # noqa: E402
+from .settings_sheet import MODE_LABELS  # noqa: E402
 
 _MODES, _MODE_LABELS = _backend.snapshot_modes()
 
@@ -119,6 +120,19 @@ class PreferencesWindow(Adw.PreferencesWindow):
             pass
         choose = Gtk.Button(label='Cambiar…', valign=Gtk.Align.CENTER)
         choose.connect('clicked', self._choose_snapshot_path)
+        path_entry = self.path_entry
+
+        def apply_path(_entry):
+            text = path_entry.get_text().strip()
+            if not text:
+                return
+            try:
+                self.backend.set_destination_path(text)
+                self._save()
+            except Exception:  # noqa: BLE001
+                pass
+
+        path_entry.connect('activate', apply_path)
         path_row.add_suffix(self.path_entry)
         path_row.add_suffix(choose)
         mode_group.add(path_row)
@@ -153,14 +167,14 @@ class PreferencesWindow(Adw.PreferencesWindow):
         sched_group = Adw.PreferencesGroup(title='Programación')
         sched_row = Adw.ComboRow(title='Programar instantáneas',
                                  subtitle='Entrada de cron gestionada por Back In Time')
-        labels = ['Desactivado', 'Cada hora', 'Cada día', 'Cada semana',
-                  'Cada mes', 'Cuando se conecte la unidad (udev)',
-                  'Repetidamente (anacron)', 'Horas personalizadas']
         modes = self._schedule_modes()
+        labels = [MODE_LABELS.get(getattr(m, 'name', str(m)),
+                                  getattr(m, 'name', str(m))) for m in modes]
         sched_row.set_model(Gtk.StringList.new(labels))
         try:
-            cur = self.cfg.scheduleMode()
-            sched_row.set_selected(modes.index(cur) if cur in modes else 0)
+            cur = getattr(self.cfg.scheduleMode(), 'name', '')
+            names = [getattr(m, 'name', '') for m in modes]
+            sched_row.set_selected(names.index(cur) if cur in names else 0)
         except Exception:  # noqa: BLE001
             sched_row.set_selected(0)
 
@@ -175,12 +189,18 @@ class PreferencesWindow(Adw.PreferencesWindow):
         return page
 
     def _schedule_modes(self):
+        """Every schedule mode the loaded core knows about."""
         c = self.cfg
+        enum = getattr(_backend.bitbase_module, 'ScheduleMode', None)
+        if enum is None:
+            names = ('NONE', 'HOUR', 'DAY', 'WEEK', 'MONTH', 'UDEV',
+                     'REPEATEDLY', 'CUSTOM_HOUR')
+            return [getattr(c, n, None) for n in names
+                    if getattr(c, n, None) is not None]
         out = []
-        for name in ('NONE', 'HOUR', 'DAY', 'WEEK', 'MONTH', 'UDEV',
-                     'REPEATEDLY', 'CUSTOM_HOUR'):
-            out.append(getattr(c, name, None))
-        return [m for m in out if m is not None]
+        for member in enum:
+            out.append(getattr(c, member.name, member))
+        return out
 
     def _on_mode_changed(self, row, *_):
         mode = _MODES[row.get_selected()]
@@ -201,7 +221,7 @@ class PreferencesWindow(Adw.PreferencesWindow):
                 f = d.get_file()
                 if f:
                     self.path_entry.set_text(f.get_path())
-                    self.cfg.set_snapshots_path(f.get_path())
+                    self.backend.set_destination_path(f.get_path())
                     self._save()
 
         dlg.connect('response', on_response)

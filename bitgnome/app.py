@@ -14,12 +14,18 @@ from bitgnome.backend import Backend  # noqa: E402
 class BackInTimeApp(Adw.Application):
     def __init__(self):
         super().__init__(application_id=APP_ID,
-                         flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
+                         flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
         self.backend = Backend()
-        self._add_action('quit', lambda *_: self.quit(), ['<Control>q'])
-        self._add_action('preferences', self._preferences, ['<Control>comma'])
+        self._add_action('quit', self._quit, ['<Control>q'])
+        self._add_action('preferences', lambda *_: self._win('open_settings'),
+                         ['<Control>comma'])
+        self._add_action('advanced-preferences', self._advanced_preferences)
         self._add_action('about', self._about)
         self._add_action('shortcuts', self._shortcuts)
+        self._add_action('toggle-theme', lambda *_: self._win('_toggle_dark'))
+        self._add_action('first-run', lambda *_: self._win('open_wizard'))
+        self._add_action('delete-snapshot',
+                         lambda *_: self._win('delete_current_snapshot'))
         self._add_action('take-snapshot', lambda *_: self._win('take_snapshot'),
                          ['<Control>s'])
         self._add_action('restore', lambda *_: self._win('restore_selection'),
@@ -27,6 +33,13 @@ class BackInTimeApp(Adw.Application):
         self._add_action('restore-to', lambda *_: self._win('restore_selection', True))
         self._add_action('log-view', lambda *_: self._win('show_log'))
         self._add_action('diff', lambda *_: self._win('show_diff'))
+
+    def _quit(self, *_):
+        win = self.get_active_window()
+        if win is not None:
+            win.close()
+        else:
+            self.quit()
 
     def _win(self, method, *args):
         win = self.get_active_window()
@@ -45,15 +58,27 @@ class BackInTimeApp(Adw.Application):
         win = self.get_active_window() or MainWindow(self)
         win.present()
 
+    def do_command_line(self, command_line):
+        args = command_line.get_arguments() or []
+        self.activate()
+        if '--first-run' in args:
+            win = self.get_active_window()
+            if win is not None:
+                win.open_wizard()
+        return 0
+
     def _preferences(self, *_):
+        self._win('open_settings')
+
+    def _advanced_preferences(self, *_):
         from bitgnome.prefs import PreferencesWindow
         PreferencesWindow(self).present()
 
     def _about(self, *_):
         dialog = Adw.AboutWindow(
             transient_for=self.get_active_window(),
-            application_name='Back In Time',
-            application_icon='camera-photo-symbolic',
+            application_name='Rewind',
+            application_icon='document-revert-symbolic',
             version=__version__,
             developer_name='Equipo de Back In Time · front GNOME',
             license_type=Gtk.License.GPL_2_0,
@@ -83,12 +108,20 @@ class BackInTimeApp(Adw.Application):
               <property name="accelerator">&lt;Control&gt;r</property>
             </object></child>
             <child><object class="GtkShortcutsShortcut">
-              <property name="title">Gestionar perfiles</property>
+              <property name="title">Ajustes</property>
               <property name="accelerator">&lt;Control&gt;comma</property>
             </object></child>
             <child><object class="GtkShortcutsShortcut">
-              <property name="title">Mostrar instantáneas</property>
-              <property name="accelerator">F9</property>
+              <property name="title">Punto anterior</property>
+              <property name="accelerator">Left</property>
+            </object></child>
+            <child><object class="GtkShortcutsShortcut">
+              <property name="title">Punto siguiente</property>
+              <property name="accelerator">Right</property>
+            </object></child>
+            <child><object class="GtkShortcutsShortcut">
+              <property name="title">Volver al presente</property>
+              <property name="accelerator">Escape</property>
             </object></child>
             <child><object class="GtkShortcutsShortcut">
               <property name="title">Salir</property>
@@ -105,5 +138,27 @@ class BackInTimeApp(Adw.Application):
         win.present()
 
 
+USAGE = """Usage: backintime-gnome [OPTION]
+
+Options:
+  --first-run   Open the first-run wizard even if the profile is configured
+  --help        Show this help and exit
+"""
+
+
 def main():
-    return BackInTimeApp().run(sys.argv)
+    argv = list(sys.argv)
+    flags = argv[1:]
+    if '--help' in flags or '-h' in flags:
+        print(USAGE, end='')
+        return 0
+
+    force_wizard = '--first-run' in flags
+    # Back In Time's own argument parser reads sys.argv while the config is
+    # loaded, so GUI flags must be gone before the app is built. The flag is
+    # still passed to GApplication so a running instance receives it.
+    sys.argv = [argv[0]] + [flag for flag in flags if flag != '--first-run']
+
+    app = BackInTimeApp()
+    app.force_wizard = force_wizard
+    return app.run([argv[0]] + flags)

@@ -34,7 +34,7 @@ class RestoreDialog(Adw.Window):
         img.add_css_class('accent')
         head.append(img)
         labels = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        title = Gtk.Label(label=f'Restaurar «{os.path.basename(rel)}»', xalign=0)
+        title = Gtk.Label(label=f'Restaurar «{os.path.basename(rel_path)}»', xalign=0)
         title.add_css_class('title-3')
         try:
             snap_name = sid.displayName
@@ -51,7 +51,7 @@ class RestoreDialog(Adw.Window):
         self.orig_check = Gtk.CheckButton(label='Ubicación original')
         self.orig_check.set_active(not other_location)
         orig_row = Adw.ActionRow(title='Ubicación original',
-                                 subtitle='/' + rel.lstrip('/'))
+                                 subtitle=rel_path if rel_path.startswith('/') else '/' + rel_path)
         orig_row.add_prefix(self.orig_check)
         orig_row.set_activatable_widget(self.orig_check)
         dest_group.add(orig_row)
@@ -193,8 +193,8 @@ class DiffDialog(Adw.Window):
     """Unified diff between the file in a snapshot and the previous one
     (or the live file when comparing «Ahora»)."""
 
-    def __init__(self, parent, sid, abs_path, prev_sid):
-        name = os.path.basename(abs_path)
+    def __init__(self, parent, sid, rel_path, prev_sid):
+        name = os.path.basename(rel_path.rstrip('/')) or rel_path
         super().__init__(transient_for=parent, modal=False,
                          title=f'Cambios - {name}',
                          default_width=820, default_height=560)
@@ -213,26 +213,44 @@ class DiffDialog(Adw.Window):
         tag_del = buf.create_tag('del', background='rgba(224,27,36,0.22)')
         tag_h = buf.create_tag('h', foreground='#7aa2d8')
 
+        def snapshot_path(snap, rel):
+            return snap.pathBackup(rel) if rel else snap.pathBackup()
+
+        try:
+            new_path = snapshot_path(sid, rel_path)
+        except Exception:  # noqa: BLE001
+            new_path = None
         old_path = None
         if prev_sid is not None:
             try:
-                rel = os.path.relpath(abs_path, sid.pathBackup(''))
-                old_path = prev_sid.pathBackup(rel)
+                old_path = snapshot_path(prev_sid, rel_path)
             except Exception:  # noqa: BLE001
                 old_path = None
 
+        limit = 2 * 1024 * 1024
+
         def read(p):
             try:
+                if os.path.getsize(p) > limit:
+                    return 'too-big'
                 with open(p, encoding='utf-8', errors='replace') as f:
                     return f.readlines()
             except OSError:
                 return None
 
-        new_lines = read(abs_path)
+        new_lines = read(new_path) if new_path else None
         old_lines = read(old_path) if old_path else None
 
+        if new_lines == 'too-big' or old_lines == 'too-big':
+            buf.set_text('El archivo es demasiado grande para el diff '
+                         'interno (más de 2 MB).')
+            return
         if new_lines is None:
             buf.set_text('No se puede leer el archivo en la instantánea.')
+            return
+        if prev_sid is None:
+            buf.set_text('No hay una instantánea anterior con la que '
+                         'comparar: este es el punto más antiguo.')
             return
         if old_lines is None:
             buf.set_text('El archivo no existía en la instantánea anterior '
