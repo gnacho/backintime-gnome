@@ -1,7 +1,7 @@
 # Maintainer: gnacho <hnacho@proton.me>
 
 pkgname=backintime-gnome
-pkgver=0.3.1
+pkgver=0.3.2
 pkgrel=1
 pkgdesc="Native GNOME (GTK4 + libadwaita) frontend for Back In Time"
 arch=(any)
