@@ -4,7 +4,18 @@ import datetime
 import gi
 
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Pango  # noqa: E402
+from gi.repository import Gdk, Gtk, Pango  # noqa: E402
+
+def has_icon(name):
+    """Whether the icon theme knows ``name`` (the app artwork may be absent)."""
+    try:
+        display = Gdk.Display.get_default()
+        if display is None:
+            return False
+        return Gtk.IconTheme.get_for_display(display).has_icon(name)
+    except Exception:  # noqa: BLE001
+        return False
+
 
 def a11y(widget, label):
     """Accessible name, with the tooltip as a fallback on GTK 4.8."""

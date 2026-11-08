@@ -75,10 +75,12 @@ class BackInTimeApp(Adw.Application):
         PreferencesWindow(self).present()
 
     def _about(self, *_):
+        from bitgnome.ui import has_icon
+        icon = 'rewind' if has_icon('rewind') else 'document-revert-symbolic'
         dialog = Adw.AboutWindow(
             transient_for=self.get_active_window(),
             application_name='Rewind',
-            application_icon='document-revert-symbolic',
+            application_icon=icon,
             version=__version__,
             developer_name='Equipo de Back In Time · front GNOME',
             license_type=Gtk.License.GPL_2_0,

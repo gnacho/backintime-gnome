@@ -150,14 +150,18 @@ class MainWindow(Adw.ApplicationWindow):
 
         brand = Gtk.Box(spacing=10)
         brand.set_valign(Gtk.Align.CENTER)
-        logo = Gtk.Box()
-        logo.add_css_class('rw-logo')
-        logo.set_valign(Gtk.Align.CENTER)
-        logo.set_halign(Gtk.Align.CENTER)
-        image = Gtk.Image(icon_name='edit-undo-symbolic', pixel_size=16)
-        image.set_valign(Gtk.Align.CENTER)
-        image.set_halign(Gtk.Align.CENTER)
-        logo.append(image)
+        if ui.has_icon('rewind'):
+            logo = Gtk.Image(icon_name='rewind', pixel_size=28)
+            logo.set_valign(Gtk.Align.CENTER)
+        else:
+            logo = Gtk.Box()
+            logo.add_css_class('rw-logo')
+            logo.set_valign(Gtk.Align.CENTER)
+            logo.set_halign(Gtk.Align.CENTER)
+            image = Gtk.Image(icon_name='edit-undo-symbolic', pixel_size=16)
+            image.set_valign(Gtk.Align.CENTER)
+            image.set_halign(Gtk.Align.CENTER)
+            logo.append(image)
         brand.append(logo)
 
         titles = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
