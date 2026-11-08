@@ -26,6 +26,7 @@ class BackInTimeApp(Adw.Application):
         self._add_action('first-run', lambda *_: self._win('open_wizard'))
         self._add_action('delete-snapshot',
                          lambda *_: self._win('delete_current_snapshot'))
+        self._add_action('retention', lambda *_: self._win('review_retention'))
         self._add_action('take-snapshot', lambda *_: self._win('take_snapshot'),
                          ['<Control>s'])
         self._add_action('restore', lambda *_: self._win('restore_selection'),

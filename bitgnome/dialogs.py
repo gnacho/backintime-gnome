@@ -274,3 +274,94 @@ class DiffDialog(Adw.Window):
                 buf.insert_with_tags(it, line + '\n', tag_del)
             else:
                 buf.insert(it, line + '\n')
+
+
+class RetentionDialog(Adw.Window):
+    """What the retention policy would remove, and what that would cost."""
+
+    def __init__(self, parent, result, on_settings=None):
+        super().__init__(transient_for=parent, modal=True, title='Retención',
+                         default_width=760, default_height=620)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.set_content(box)
+        box.append(Adw.HeaderBar())
+
+        scroll = Gtk.ScrolledWindow(vexpand=True)
+        box.append(scroll)
+        body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        body.set_margin_top(16)
+        body.set_margin_bottom(16)
+        body.set_margin_start(18)
+        body.set_margin_end(18)
+        scroll.set_child(body)
+
+        cutoff = result['cutoff']
+        count = len(result['doomed'])
+        intro = Gtk.Label(
+            label=f'{count} instantáneas anteriores al {cutoff:%d/%m/%Y} '
+                  f'(retención: {result["label"]}) se eliminarán en la '
+                  'próxima copia.',
+            xalign=0, wrap=True)
+        intro.add_css_class('heading')
+        body.append(intro)
+
+        lost = result['lost']
+        title = Gtk.Label(xalign=0, wrap=True)
+        title.set_markup(f'<b>Solo existen ahí: {len(lost)} archivos</b>')
+        body.append(title)
+        if lost:
+            hint = Gtk.Label(xalign=0, wrap=True)
+            hint.add_css_class('dim-label')
+            hint.set_text('Si borras esas instantáneas, estos archivos se '
+                          'pierden. No hay versión más reciente de ellos.')
+            body.append(hint)
+            body.append(self._path_list(lost))
+        else:
+            ok = Gtk.Label(xalign=0, wrap=True)
+            ok.add_css_class('dim-label')
+            ok.set_text('Todos los archivos de esas instantáneas tienen una '
+                        'versión más reciente.')
+            body.append(ok)
+
+        mine = Gtk.Label(xalign=0, wrap=True)
+        mine.set_markup(f'Con versión nueva en la copia más reciente: '
+                        f'<b>{result["superseded"]}</b>')
+        body.append(mine)
+        if result.get('truncated'):
+            note = Gtk.Label(xalign=0, wrap=True)
+            note.add_css_class('dim-label')
+            note.set_text('Recuento limitado: hay más archivos de los que se '
+                          'pueden analizar de una vez.')
+            body.append(note)
+
+        buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END)
+        if on_settings is not None:
+            settings_btn = Gtk.Button(label='Abrir ajustes')
+            settings_btn.add_css_class('rw-soft')
+            settings_btn.connect('clicked', lambda *_: (
+                self.close(), on_settings()))
+            buttons.append(settings_btn)
+        close = Gtk.Button(label='Entendido')
+        close.add_css_class('rw-primary')
+        close.connect('clicked', lambda *_: self.close())
+        buttons.append(close)
+        body.append(buttons)
+
+    @staticmethod
+    def _path_list(paths, limit=300):
+        text = '\n'.join('/' + path for path in paths[:limit])
+        if len(paths) > limit:
+            text += f'\n… y {len(paths) - limit} más'
+        return _text_view(text)
+
+
+def _text_view(text):
+    view = Gtk.TextView(editable=False, monospace=True, top_margin=6,
+                        bottom_margin=6, left_margin=8, right_margin=8)
+    view.get_buffer().set_text(text)
+    view.add_css_class('rw-mono')
+    scroll = Gtk.ScrolledWindow()
+    scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+    scroll.set_size_request(-1, 260)
+    scroll.set_child(view)
+    return scroll
