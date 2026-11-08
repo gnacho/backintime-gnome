@@ -1,14 +1,18 @@
-"""Retention audit: what would be lost when old snapshots are removed.
+"""Retention audit: what the engine would remove, and what that would cost.
 
-Back In Time removes snapshots older than the configured age on the next
-backup. This module answers, before that happens, which files exist only in
-those doomed snapshots (they would be lost) and which ones already have a
-newer version in the latest snapshot.
+The cutoff and the deletion rules are taken from the core, not re-invented:
+``Config.removeOldSnapshotsDate()`` decides the date, the oldest snapshot is
+never removed, and named snapshots are kept when the profile says so.
+
+Two engines are handled honestly: 2.0.0-rc2 returns ``date(1, 1, 1)`` for
+every unit, so it never removes anything; the audit reports that instead of
+promising deletions that will not happen.
 """
 import datetime
 import os
 
-MAX_FILES = 20000
+MAX_PATHS = 200000
+NEVER = datetime.date(1, 1, 1)
 
 
 def _sid_date(sid):
@@ -17,33 +21,32 @@ def _sid_date(sid):
         return value.date()
     if isinstance(value, datetime.date):
         return value
-    if isinstance(value, str):
-        try:
-            return datetime.datetime.strptime(value[:15],
-                                              '%Y%m%d-%H%M%S').date()
-        except ValueError:
-            pass
-    try:
-        return datetime.datetime.strptime(
-            str(getattr(sid, 'displayName', sid))[:15], '%Y%m%d-%H%M%S').date()
-    except ValueError:
-        return None
-
-
-def cutoff_date(value, unit_name, today=None):
-    """Same arithmetic as ``Config.removeOldSnapshotsDate``."""
-    today = today or datetime.date.today()
-    if unit_name == 'DAY':
-        return today - datetime.timedelta(days=value)
-    if unit_name == 'WEEK':
-        return today - datetime.timedelta(days=today.weekday() + 7 * value)
-    if unit_name == 'YEAR':
-        return today.replace(day=1, year=today.year - value)
+    for fmt in ('%Y%m%d-%H%M%S', '%Y-%m-%d %H:%M:%S'):
+        if isinstance(value, str):
+            try:
+                return datetime.datetime.strptime(value[:19], fmt).date()
+            except ValueError:
+                continue
+        for attr in ('displayID', 'displayName'):
+            text = getattr(sid, attr, None)
+            if not isinstance(text, str):
+                continue
+            try:
+                return datetime.datetime.strptime(text[:19], fmt).date()
+            except ValueError:
+                continue
     return None
 
 
-def state(cfg, today=None):
-    """Retention setting in a shape the UI can show, or None if disabled."""
+def _sid_name(sid):
+    try:
+        return getattr(sid, 'name', None) or None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def state(cfg):
+    """Retention as the core will apply it, or None when disabled."""
     try:
         enabled, value, unit = cfg.removeOldSnapshots()
     except Exception:  # noqa: BLE001
@@ -54,86 +57,118 @@ def state(cfg, today=None):
     if unit_name is None:
         unit_name = {10: 'HOUR', 20: 'DAY', 30: 'WEEK', 40: 'MONTH',
                      80: 'YEAR'}.get(unit, '')
-    cutoff = cutoff_date(int(value), unit_name, today)
-    if cutoff is None:
-        return None
     labels = {'DAY': ('día', 'días'), 'WEEK': ('semana', 'semanas'),
-              'YEAR': ('año', 'años')}
+              'YEAR': ('año', 'años'), 'MONTH': ('mes', 'meses'),
+              'HOUR': ('hora', 'horas')}
     singular, plural = labels.get(unit_name, ('día', 'días'))
-    return {'value': value, 'unit': unit_name, 'cutoff': cutoff,
-            'label': f'{value} {singular if value == 1 else plural}'}
+    try:
+        cutoff = cfg.removeOldSnapshotsDate()
+    except Exception:  # noqa: BLE001
+        cutoff = NEVER
+    if not isinstance(cutoff, datetime.date):
+        cutoff = NEVER
+    return {'value': value, 'unit': unit_name,
+            'label': f'{value} {singular if value == 1 else plural}',
+            'cutoff': cutoff, 'engine_inert': cutoff <= NEVER}
 
 
-def walk_files(root, limit=MAX_FILES):
-    """Relative paths of the files under a snapshot backup root."""
-    files = set()
-    truncated = False
-    if not root or not os.path.isdir(root):
-        return files, truncated
-    for dirpath, _dirnames, filenames in os.walk(root, followlinks=False):
-        for name in filenames:
-            rel = os.path.relpath(os.path.join(dirpath, name), root)
-            files.add(rel)
-            if len(files) >= limit:
-                return files, True
-    return files, truncated
-
-
-def audit(cfg, sids, today=None, limit=MAX_FILES):
-    """Which files would disappear if the retention policy runs now.
-
-    ``sids`` newest first. Returns None when retention is off or uses a unit
-    the core does not support (months, hours).
-    """
-    info = state(cfg, today)
-    if info is None or not sids:
-        return None
-    cutoff = info['cutoff']
-    doomed = []
-    for sid in sids:
+def plan(sids, cutoff, keep_named):
+    """Snapshots the engine would remove, mirroring ``removeOldSnapshots``."""
+    remaining = list(reversed(sids))
+    doomed, kept = [], []
+    while len(remaining) > 1:
+        sid = remaining[0]
         date = _sid_date(sid)
-        if date is not None and date < cutoff:
-            doomed.append((sid, date))
-    if not doomed:
-        return None
-
-    reference = sids[0] if sids[0] not in [d[0] for d in doomed] else None
-    reference_files, ref_truncated = walk_files(
-        _backup_root(reference), limit) if reference is not None else (set(), False)
-
-    lost, superseded = [], 0
-    scanned = 0
-    truncated = ref_truncated
-    for sid, _date in doomed:
-        files, cut = walk_files(_backup_root(sid), limit)
-        truncated = truncated or cut
-        for rel in files:
-            scanned += 1
-            if rel in reference_files:
-                superseded += 1
-            elif rel not in lost:
-                lost.append(rel)
-        if len(lost) >= limit:
-            truncated = True
+        if date is None or date >= cutoff:
             break
+        if keep_named and _sid_name(sid):
+            kept.append(remaining.pop(0))
+            continue
+        doomed.append(remaining.pop(0))
+    return doomed, remaining + kept
 
-    return {
-        'label': info['label'],
-        'cutoff': cutoff,
-        'doomed': [(str(sid.displayName), date) for sid, date in doomed],
-        'reference': str(getattr(reference, 'displayName', reference))
-        if reference is not None else None,
-        'lost': sorted(lost),
-        'superseded': superseded,
-        'scanned': scanned,
-        'truncated': truncated,
-    }
+
+def _collect(sids, budget):
+    """Union of file paths under the given snapshots, with a hard budget."""
+    paths = set()
+    unreadable = False
+    limited = False
+
+    def onerror(_exc):
+        nonlocal unreadable
+        unreadable = True
+
+    for sid in sids:
+        root = _backup_root(sid)
+        if not root or not os.path.isdir(root):
+            unreadable = True
+            continue
+        for dirpath, dirnames, filenames in os.walk(root, onerror=onerror,
+                                                    followlinks=False):
+            for name in filenames:
+                paths.add(os.path.relpath(os.path.join(dirpath, name), root))
+            for name in dirnames:
+                full = os.path.join(dirpath, name)
+                if os.path.islink(full):
+                    paths.add(os.path.relpath(full, root))
+            if len(paths) >= budget:
+                limited = True
+                break
+        if limited:
+            break
+    reason = 'unreadable' if unreadable else ('limit' if limited else None)
+    return paths, reason
 
 
 def _backup_root(sid):
-    if sid is None:
-        return None
     try:
         return sid.pathBackup() if hasattr(sid, 'pathBackup') else None
     except Exception:  # noqa: BLE001
         return None
+
+
+def audit(cfg, sids, budget=MAX_PATHS):
+    """What the retention policy would remove and what would be lost.
+
+    ``sids`` newest first. Returns None when retention is off.
+    """
+    info = state(cfg)
+    if info is None or not sids:
+        return None
+    if info['engine_inert']:
+        return {'engine_inert': True, 'label': info['label'],
+                'cutoff': None, 'doomed': [], 'lost': [], 'superseded': 0,
+                'scanned': 0, 'complete': True, 'reason': None}
+
+    try:
+        keep_named = bool(cfg.dontRemoveNamedSnapshots())
+    except Exception:  # noqa: BLE001
+        keep_named = True
+    doomed_sids, survivors = plan(sids, info['cutoff'], keep_named)
+    if not doomed_sids:
+        return None
+
+    survivor_paths, survivor_reason = _collect(survivors, budget)
+    doomed_paths, doomed_reason = _collect(doomed_sids, budget)
+    reason = survivor_reason or doomed_reason
+    complete = reason is None
+
+    # With an incomplete picture, a path missing from the survivor set is not
+    # proof of loss, so nothing is claimed as lost.
+    lost = sorted(doomed_paths - survivor_paths) if complete else []
+    superseded = len(doomed_paths & survivor_paths)
+
+    return {
+        'engine_inert': False,
+        'label': info['label'],
+        'cutoff': info['cutoff'],
+        'doomed': [(str(getattr(sid, 'displayName', sid)), _sid_date(sid))
+                   for sid in doomed_sids],
+        'reference': str(getattr(survivors[-1], 'displayName', ''))
+        if survivors else None,
+        'lost': lost,
+        'superseded': superseded,
+        'scanned': len(doomed_paths),
+        'complete': complete,
+        'reason': reason,
+    }

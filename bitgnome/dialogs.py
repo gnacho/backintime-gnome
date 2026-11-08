@@ -295,6 +295,25 @@ class RetentionDialog(Adw.Window):
         body.set_margin_end(18)
         scroll.set_child(body)
 
+        if result.get('engine_inert'):
+            intro = Gtk.Label(
+                label=f'La retención está configurada en {result["label"]}, '
+                      'pero este núcleo de Back In Time no la aplica: '
+                      'removeOldSnapshotsDate() devuelve 1/1/1 con cualquier '
+                      'unidad, así que no se borrará ninguna instantánea.',
+                xalign=0, wrap=True)
+            intro.add_css_class('heading')
+            body.append(intro)
+            note = Gtk.Label(xalign=0, wrap=True)
+            note.add_css_class('dim-label')
+            note.set_text('Es un fallo de la versión 2.0.0-rc2 del motor, no '
+                          'de esta aplicación. Con 1.6.2 la retención sí se '
+                          'aplica. No hay archivos en riesgo por borrado '
+                          'automático mientras el motor no la ejecute.')
+            body.append(note)
+            self._buttons(body, on_settings)
+            return
+
         cutoff = result['cutoff']
         count = len(result['doomed'])
         intro = Gtk.Label(
@@ -306,34 +325,44 @@ class RetentionDialog(Adw.Window):
         body.append(intro)
 
         lost = result['lost']
+        complete = result.get('complete', True)
         title = Gtk.Label(xalign=0, wrap=True)
         title.set_markup(f'<b>Solo existen ahí: {len(lost)} archivos</b>')
         body.append(title)
-        if lost:
+        if not complete:
+            warn = Gtk.Label(xalign=0, wrap=True)
+            warn.add_css_class('dim-label')
+            if result.get('reason') == 'unreadable':
+                warn.set_text('No se pudo leer todo el contenido (permisos o '
+                              'destino sin montar). No se puede asegurar qué '
+                              'se perdería.')
+            else:
+                warn.set_text('Hay más archivos de los que se pueden analizar '
+                              'de una vez. No se puede asegurar qué se '
+                              'perdería; lista incompleta.')
+            body.append(warn)
+        elif lost:
             hint = Gtk.Label(xalign=0, wrap=True)
             hint.add_css_class('dim-label')
-            hint.set_text('Si borras esas instantáneas, estos archivos se '
+            hint.set_text('Si se borran esas instantáneas, estos archivos se '
                           'pierden. No hay versión más reciente de ellos.')
             body.append(hint)
             body.append(self._path_list(lost))
         else:
             ok = Gtk.Label(xalign=0, wrap=True)
             ok.add_css_class('dim-label')
-            ok.set_text('Todos los archivos de esas instantáneas tienen una '
-                        'versión más reciente.')
+            ok.set_text('Todos los archivos de esas instantáneas existen en '
+                        'alguna instantánea que se conserva.')
             body.append(ok)
 
         mine = Gtk.Label(xalign=0, wrap=True)
-        mine.set_markup(f'Con versión nueva en la copia más reciente: '
+        mine.set_markup('Con versión en una instantánea que se conserva: '
                         f'<b>{result["superseded"]}</b>')
         body.append(mine)
-        if result.get('truncated'):
-            note = Gtk.Label(xalign=0, wrap=True)
-            note.add_css_class('dim-label')
-            note.set_text('Recuento limitado: hay más archivos de los que se '
-                          'pueden analizar de una vez.')
-            body.append(note)
+        self._buttons(body, on_settings)
 
+    @staticmethod
+    def _buttons(body, on_settings):
         buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END)
         if on_settings is not None:
             settings_btn = Gtk.Button(label='Abrir ajustes')

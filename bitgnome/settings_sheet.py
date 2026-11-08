@@ -98,6 +98,10 @@ class SettingsSheet(Adw.Window):
         self.body.append(self._error_label)
 
     # ---------------------------------------------------------------- save
+    def _show_error(self, message):
+        if self._error_label is not None:
+            self._error_label.set_text(message)
+
     def _save(self):
         ok = ui.save(self.cfg)
         if self._error_label is not None:
@@ -221,6 +225,10 @@ class SettingsSheet(Adw.Window):
         self.body.append(self.destination_row)
 
     def _change_destination(self, _btn):
+        if self.backend.busy_backup:
+            self._show_error('Hay una copia en curso: espera a que termine')
+            return
+
         def on_path(path):
             try:
                 self.backend.set_destination_path(path)
@@ -277,6 +285,8 @@ class SettingsSheet(Adw.Window):
             else:
                 self.cfg.setRemoveOldSnapshots(True, 2, units.YEAR)
             self._save()
+            if self.on_change:
+                self.on_change(retention=True)
         except Exception:  # noqa: BLE001
             pass
 
@@ -496,6 +506,9 @@ class SettingsSheet(Adw.Window):
         return expander
 
     def _on_profile_chosen(self, _btn, pid):
+        if self.backend.busy_backup:
+            self._show_error('Hay una copia en curso: espera a que termine')
+            return
         try:
             self.backend.set_current_profile(pid)
         except Exception:  # noqa: BLE001

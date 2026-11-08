@@ -84,6 +84,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._retention_result = None
         self._retention_sig = None
         self._retention_last = 0.0
+        self._retention_token = 0
         self._playing = False
         self._play_source = None
 
@@ -144,8 +145,8 @@ class MainWindow(Adw.ApplicationWindow):
         self._build_crumbs()
         self._build_browser()
 
-        column.append(self._build_timeline())
         self._build_actionbar()
+        root.append(self._build_timeline())
 
     def _build_header(self):
         header = Adw.HeaderBar()
@@ -396,7 +397,7 @@ class MainWindow(Adw.ApplicationWindow):
         bar.add_css_class('rw-actionbar')
         bar.set_halign(Gtk.Align.CENTER)
         bar.set_valign(Gtk.Align.END)
-        bar.set_margin_bottom(96)
+        bar.set_margin_bottom(16)
         self.actionbar_name = Gtk.Label(label='', xalign=0)
         self.actionbar_name.add_css_class('rw-actionbar-name')
         bar.append(self.actionbar_name)
@@ -506,6 +507,11 @@ class MainWindow(Adw.ApplicationWindow):
         return False
 
     def open_wizard(self):
+        if self._snap_worker_running or self.backend.busy_backup \
+                or self._busy_ops:
+            self.toast('Espera a que termine la operación para abrir el '
+                       'asistente')
+            return None
         existing = getattr(self, '_wizard', None)
         if existing is not None and existing.get_visible():
             existing.present()
@@ -528,15 +534,26 @@ class MainWindow(Adw.ApplicationWindow):
             Adw.ColorScheme.DEFAULT if manager.get_dark()
             else Adw.ColorScheme.FORCE_DARK)
 
-    def _on_settings_changed(self, reload=False):
+    def _on_settings_changed(self, reload=False, retention=False):
+        if retention:
+            self._retention_result = None
+            self._retention_sig = None
+            self._schedule_retention(force=True)
         if not reload:
             self._update_hero()
             self.render_files()
+            return
+        if self._snap_worker_running or self.backend.busy_backup \
+                or self._busy_ops:
+            self.toast('Espera a que termine la operación para cambiar de '
+                       'perfil o destino')
             return
         self._stop_play()
         self.index = None
         self.rel = ''
         self.selected = None
+        self._retention_result = None
+        self._retention_sig = None
         self._prepare_profile()
 
     # ------------------------------------------------------------ snapshots
@@ -1286,39 +1303,56 @@ class MainWindow(Adw.ApplicationWindow):
         self.actionbar.set_visible(True)
 
     # ------------------------------------------------------------ retention
-    def _schedule_retention(self, force=False, skip_toast=False):
+    def _schedule_retention(self, force=False):
+        sids = list(self.sids)
+        if not sids or self.cfg is None:
+            return
         import time
         now = time.time()
         if not force and now - self._retention_last < 300:
             return
         self._retention_last = now
-        sids = list(self.sids)
-        if not sids or self.cfg is None:
-            return
+        self._retention_token += 1
+        token = self._retention_token
 
         def work():
             from bitgnome import retention
             return retention.audit(self.cfg, sids)
 
         def done(result, error):
+            if token != self._retention_token:
+                return False
             if error or result is None:
-                if result is None:
-                    self._retention_result = None
+                self._retention_result = None
                 return False
             self._retention_result = result
-            signature = (tuple(result['doomed']), len(result['lost']),
-                         result['superseded'])
+            signature = (result.get('engine_inert'), tuple(result['doomed']),
+                         len(result['lost']), result['superseded'],
+                         result.get('complete', True))
             if signature == self._retention_sig:
                 return False
             self._retention_sig = signature
-            if not skip_toast:
-                self.toast(
-                    f'{len(result["doomed"])} instantáneas fuera de '
-                    f'retención: {len(result["lost"])} archivos solo existen '
-                    'ahí', 'Ver detalle', self._show_retention)
+            self._announce_retention(result)
             return False
 
         Worker(work, done)
+
+    def _announce_retention(self, result):
+        if result.get('engine_inert'):
+            self.toast(f'La retención ({result["label"]}) no se aplica: este '
+                       'núcleo no borra instantáneas', 'Ver detalle',
+                       self._show_retention)
+            return
+        if not result.get('complete', True):
+            self.toast(
+                f'{len(result["doomed"])} instantáneas fuera de retención; '
+                'no se pudo analizar todo el contenido', 'Ver detalle',
+                self._show_retention)
+            return
+        self.toast(
+            f'{len(result["doomed"])} instantáneas fuera de retención: '
+            f'{len(result["lost"])} archivos solo existen ahí', 'Ver detalle',
+            self._show_retention)
 
     def review_retention(self):
         if self._retention_result is not None:
@@ -1634,6 +1668,8 @@ class MainWindow(Adw.ApplicationWindow):
             GLib.idle_add(self._close_now)
 
     def _close_now(self):
+        if self._busy_ops:
+            return False
         self._quit_when_done = False
         self.backend.release_mount()
         self.close()
@@ -1775,7 +1811,7 @@ class MainWindow(Adw.ApplicationWindow):
             self.toast('Punto en el tiempo eliminado')
             self.index = None
             self.reload_snapshots()
-            self._schedule_retention(force=True, skip_toast=True)
+            self._schedule_retention(force=True)
 
         Worker(work, done)
 
