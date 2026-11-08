@@ -1296,7 +1296,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.snap_btn.set_label('Copiando…')
         self.title_sub.set_text('Creando copia…')
 
-        dialog = Adw.Window(transient_for=self, modal=True,
+        dialog = Adw.Window(transient_for=self, modal=False,
                             title='Tomando instantánea',
                             default_width=440, resizable=False)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
@@ -1358,6 +1358,14 @@ class MainWindow(Adw.ApplicationWindow):
 
         stop_btn.connect('clicked', stop_clicked)
         background_btn.connect('clicked', to_background)
+        def on_close(*_):
+            # closing the window keeps the copy running, like the button
+            if not state['background']:
+                state['background'] = True
+                self.toast('La copia sigue en segundo plano. Te aviso al terminar')
+            return False
+
+        dialog.connect('close-request', on_close)
         self._request_stop = stop_clicked
         dialog.bit_stop_btn = stop_btn
         dialog.bit_background_btn = background_btn
