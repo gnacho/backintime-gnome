@@ -10,7 +10,7 @@ license=(GPL-2.0-or-later)
 optdepends=('gocryptfs: encrypted profiles with Back In Time 2.0')
 depends=(backintime-cli gtk4 libadwaita python-gobject)
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('75a0d60ea6107b709d8d70c3d494463fa888647342e4e3b6086200192e8b8329')
+sha256sums=('5a028bccc9aa203ea1ed4b1be848e14b346b61aa54e3eb76648147252124d8a1')
 
 package() {
   cd "$pkgname-$pkgver"

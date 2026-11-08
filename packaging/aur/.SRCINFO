@@ -1,6 +1,6 @@
 pkgbase = backintime-gnome
 	pkgdesc = Native GNOME (GTK4 + libadwaita) frontend for Back In Time
-	pkgver = 0.3.1
+	pkgver = 0.3.2
 	pkgrel = 1
 	url = https://github.com/gnacho/backintime-gnome
 	arch = any
@@ -10,7 +10,7 @@ pkgbase = backintime-gnome
 	depends = libadwaita
 	depends = python-gobject
 	optdepends = gocryptfs: encrypted profiles with Back In Time 2.0
-	source = backintime-gnome-0.3.1.tar.gz::https://github.com/gnacho/backintime-gnome/archive/refs/tags/v0.3.1.tar.gz
-	sha256sums = 75a0d60ea6107b709d8d70c3d494463fa888647342e4e3b6086200192e8b8329
+	source = backintime-gnome-0.3.2.tar.gz::https://github.com/gnacho/backintime-gnome/archive/refs/tags/v0.3.2.tar.gz
+	sha256sums = 5a028bccc9aa203ea1ed4b1be848e14b346b61aa54e3eb76648147252124d8a1
 
 pkgname = backintime-gnome
