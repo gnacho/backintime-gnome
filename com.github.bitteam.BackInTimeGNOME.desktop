@@ -2,7 +2,7 @@
 Name=Back In Time (GNOME)
 Comment=Copias de seguridad con rsync - interfaz GTK4/libadwaita
 Exec=backintime-gnome
-Icon=document-revert-symbolic
+Icon=rewind
 Type=Application
 Categories=System;Utility;GTK;
 Keywords=backup;snapshot;rsync;

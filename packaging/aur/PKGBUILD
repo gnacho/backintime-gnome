@@ -1,7 +1,7 @@
 # Maintainer: gnacho <hnacho@proton.me>
 
 pkgname=backintime-gnome
-pkgver=0.3.0
+pkgver=0.3.1
 pkgrel=1
 pkgdesc="Native GNOME (GTK4 + libadwaita) frontend for Back In Time"
 arch=(any)
@@ -23,6 +23,11 @@ package() {
   install -Dm644 com.github.bitteam.BackInTimeGNOME.desktop \
     "$pkgdir/usr/share/applications/com.github.bitteam.BackInTimeGNOME.desktop"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  install -Dm644 icons/rewind.svg \
+    "$pkgdir/usr/share/icons/hicolor/scalable/apps/rewind.svg"
+  install -Dm644 icons/rewind-128.png \
+    "$pkgdir/usr/share/icons/hicolor/128x128/apps/rewind.png"
 
   python -m compileall -q -d "/usr/lib/$pkgname" "$pkgdir/usr/lib/$pkgname"
 }
