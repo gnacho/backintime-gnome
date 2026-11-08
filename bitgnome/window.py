@@ -81,6 +81,9 @@ class MainWindow(Adw.ApplicationWindow):
         self._seek_source = None
         self._search_source = None
         self._search_token = 0
+        self._retention_result = None
+        self._retention_sig = None
+        self._retention_last = 0.0
         self._playing = False
         self._play_source = None
 
@@ -205,6 +208,7 @@ class MainWindow(Adw.ApplicationWindow):
         section.append('Registro de la instantánea', 'app.log-view')
         section.append('Comparar con la anterior', 'app.diff')
         section.append('Eliminar esta instantánea', 'app.delete-snapshot')
+        section.append('Revisar retención', 'app.retention')
         menu.append_section(None, section)
         section2 = Gio.Menu()
         section2.append('Gestionar perfiles', 'app.advanced-preferences')
@@ -474,6 +478,7 @@ class MainWindow(Adw.ApplicationWindow):
             if not ok:
                 self.toast(f'No se pudo montar el destino: {message}')
             self.reload_snapshots()
+            self._schedule_retention()
             Worker(self.backend.apply_automation, self._automation_done)
             return False
 
@@ -1280,6 +1285,73 @@ class MainWindow(Adw.ApplicationWindow):
                                    else 'Restaurar')
         self.actionbar.set_visible(True)
 
+    # ------------------------------------------------------------ retention
+    def _schedule_retention(self, force=False, skip_toast=False):
+        import time
+        now = time.time()
+        if not force and now - self._retention_last < 300:
+            return
+        self._retention_last = now
+        sids = list(self.sids)
+        if not sids or self.cfg is None:
+            return
+
+        def work():
+            from bitgnome import retention
+            return retention.audit(self.cfg, sids)
+
+        def done(result, error):
+            if error or result is None:
+                if result is None:
+                    self._retention_result = None
+                return False
+            self._retention_result = result
+            signature = (tuple(result['doomed']), len(result['lost']),
+                         result['superseded'])
+            if signature == self._retention_sig:
+                return False
+            self._retention_sig = signature
+            if not skip_toast:
+                self.toast(
+                    f'{len(result["doomed"])} instantáneas fuera de '
+                    f'retención: {len(result["lost"])} archivos solo existen '
+                    'ahí', 'Ver detalle', self._show_retention)
+            return False
+
+        Worker(work, done)
+
+    def review_retention(self):
+        if self._retention_result is not None:
+            self._show_retention()
+            return
+        sids = list(self.sids)
+        if not sids or self.cfg is None:
+            self.toast('Todavía no hay instantáneas')
+            return
+
+        def work():
+            from bitgnome import retention
+            return retention.audit(self.cfg, sids)
+
+        def done(result, error):
+            if error or result is None:
+                self.toast('No hay instantáneas fuera de retención')
+                return False
+            self._retention_result = result
+            self._show_retention()
+            return False
+
+        Worker(work, done)
+
+    def _show_retention(self):
+        result = self._retention_result
+        if result is None:
+            self.toast('No hay instantáneas fuera de retención')
+            return
+        from bitgnome.dialogs import RetentionDialog
+        dialog = RetentionDialog(self, result, on_settings=self.open_settings)
+        dialog.present()
+
     # -------------------------------------------------------------- actions
     def take_snapshot(self):
         if self._snap_worker_running or self.backend.busy_backup:
@@ -1420,6 +1492,7 @@ class MainWindow(Adw.ApplicationWindow):
                 self.toast('Punto en el tiempo creado', 'Ver ahora',
                            lambda: self.set_snapshot(None))
             self.reload_snapshots()
+            self._schedule_retention(force=True)
             if self._quit_when_done:
                 GLib.idle_add(self._close_now)
 
@@ -1702,6 +1775,7 @@ class MainWindow(Adw.ApplicationWindow):
             self.toast('Punto en el tiempo eliminado')
             self.index = None
             self.reload_snapshots()
+            self._schedule_retention(force=True, skip_toast=True)
 
         Worker(work, done)
 

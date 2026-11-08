@@ -28,6 +28,9 @@ MODE_LABELS = {
 }
 UNIT_NAMES = {'HOUR': 'horas', 'DAY': 'días', 'WEEK': 'semanas',
               'MONTH': 'meses', 'YEAR': 'años'}
+# The core only removes snapshots for days, weeks and years; months and
+# hours resolve to "never", so they are not offered.
+RETENTION_UNSUPPORTED = ('MONTH', 'HOUR')
 def _safe(getter, default=None):
     try:
         return getter()
@@ -238,17 +241,22 @@ class SettingsSheet(Adw.Window):
         unit_name = getattr(unit, 'name', '')
         if not enabled:
             current = 'forever'
+        elif unit_name == 'WEEK' and value == 2:
+            current = '2w'
+        elif unit_name == 'YEAR' and value == 1:
+            current = '1y'
         elif unit_name == 'YEAR' and value == 2:
             current = '2y'
-        elif unit_name == 'MONTH' and value == 6:
-            current = '6m'
         else:
             current = 'custom'
-        options = [('6m', '6 meses'), ('2y', '2 años'), ('forever', 'Siempre')]
+        options = [('2w', '2 semanas'), ('1y', '1 año'), ('2y', '2 años'),
+                   ('forever', 'Siempre')]
         control = ui.segmented(options, current, self._on_retention_changed)
         subtitle = 'Las más antiguas se eliminan solas para hacer hueco'
         if current == 'custom':
             subtitle = f'Ahora: {value} {UNIT_NAMES.get(unit_name, "")}'.strip()
+            if unit_name in RETENTION_UNSUPPORTED:
+                subtitle += ' (el motor no borra con esta unidad)'
         self.body.append(ui.row('Conservar copias durante', subtitle, control))
 
     def _retention(self):
@@ -262,8 +270,10 @@ class SettingsSheet(Adw.Window):
         try:
             if key == 'forever':
                 self.cfg.setRemoveOldSnapshots(False, 0, units.YEAR)
-            elif key == '6m':
-                self.cfg.setRemoveOldSnapshots(True, 6, units.MONTH)
+            elif key == '2w':
+                self.cfg.setRemoveOldSnapshots(True, 2, units.WEEK)
+            elif key == '1y':
+                self.cfg.setRemoveOldSnapshots(True, 1, units.YEAR)
             else:
                 self.cfg.setRemoveOldSnapshots(True, 2, units.YEAR)
             self._save()

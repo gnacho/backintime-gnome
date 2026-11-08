@@ -119,6 +119,11 @@ that layout is **Rewind**; the package and the repository keep the
 - **Log**: viewer for `takesnapshot_N.log` with Info/Warning/Error filter.
 - **Compare**: built-in unified diff between the file in the snapshot and the
   previous one (double click on a file while browsing a point in time).
+- **Retention warning**: when snapshots fall outside the configured age, the app
+  says how many there are and, for the files that only exist there, whether they
+  would be lost or already have a newer version. Menu: *Revisar retención*.
+  Only days, weeks and years are offered, because the core does not remove
+  snapshots with the other units.
 - **Mounts and profiles**: SSH and encrypted destinations stay mounted while the
   app is open, so browsing a point in time works; the selected profile is
   remembered across restarts in `~/.config/backintime-gnome/state.ini`.
