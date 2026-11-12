@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CHECKS = [
     [sys.executable, 'tests/test_cron_status.py'],
+    [sys.executable, 'tests/test_destination.py'],
     [sys.executable, 'tests/test_dialogs.py'],
     [sys.executable, 'tests/test_theme.py'],
     [sys.executable, 'tests/test_wizard_dismiss.py'],
