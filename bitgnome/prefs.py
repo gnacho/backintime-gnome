@@ -31,6 +31,8 @@ class PreferencesWindow(Adw.PreferencesWindow):
                          default_width=820, default_height=640)
         self.backend = app.backend
         self.cfg = app.backend.cfg
+        from bitgnome import ui as _ui
+        _ui.apply_theme(self)
 
         if self.cfg is None:
             page = Adw.PreferencesPage()
@@ -52,8 +54,20 @@ class PreferencesWindow(Adw.PreferencesWindow):
     def _save(self):
         try:
             self.cfg.save()
-        except Exception:  # noqa: BLE001
-            pass
+            return True
+        except Exception as exc:  # noqa: BLE001
+            # Silent failures left the screen showing a value the config
+            # never got.
+            dialog = Adw.MessageDialog(
+                transient_for=self, modal=True,
+                heading='No se pudo guardar la configuración',
+                body=f'El cambio se ve en pantalla pero no se ha guardado: '
+                     f'{exc}')
+            dialog.add_response('close', 'Cerrar')
+            dialog.set_default_response('close')
+            dialog.present()
+            self._save_dialog = dialog
+            return False
 
     # ------------------------------------------------------------- helpers
     def _switch_row(self, group, title, subtitle, get, set_):

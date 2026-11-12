@@ -31,6 +31,34 @@ bitbase = None
 bitbase_module = None   # raw module in both 1.x and 2.x (TimeUnit lives here)
 
 
+def _init_translations(tools_module):
+    """Load the core's catalogue with the language of the session.
+
+    Modules bind ``_`` when they are imported, so this has to run before
+    ``config`` and ``snapshots``. Without it every message the core writes
+    reaches the window in English, which is what the destination warning did.
+    """
+    if tools_module is None:
+        return None
+    code = ''
+    try:
+        from gi.repository import GLib
+        for name in GLib.get_language_names() or []:
+            base = name.split('.')[0].split('_')[0]
+            if base and base not in ('C', 'POSIX'):
+                code = base
+                break
+    except Exception:                     # noqa: BLE001
+        code = ''
+    if not code:
+        import locale as _locale
+        code = (_locale.getlocale()[0] or 'en').split('_')[0]
+    try:
+        return tools_module.initiate_translation(code)
+    except Exception:                     # noqa: BLE001
+        return None
+
+
 def _locate_common():
     """Find and import Back In Time's ``common`` package."""
     global _LOCATED, _IMPORT_ERROR
@@ -59,6 +87,12 @@ def _locate_common():
     else:
         _IMPORT_ERROR = 'No se encontró el núcleo de Back In Time (common/).'
         return
+
+    try:
+        import tools as _tools_first      # noqa: F401
+    except ImportError:
+        _tools_first = None
+    _init_translations(_tools_first)
 
     try:
         import config as _config          # noqa: F401
@@ -487,6 +521,16 @@ class Backend:
         # "stopped" here would show a banner over a working cron.
         return 'unknown'
 
+    def _udev_ready(self):
+        """Whether the core can install udev rules right now.
+
+        The rules are written by a D-Bus serviceHelper that ships with the Qt
+        package. With only the CLI installed the mode is dead, and the UI used
+        to present it as if it worked.
+        """
+        setup = getattr(self.cfg, 'setupUdev', None)
+        return getattr(setup, 'isReady', None)
+
     def _needs_cron(self):
         """Whether the current schedule mode relies on cron."""
         try:
@@ -520,6 +564,8 @@ class Backend:
             status['mode'] = ''
         status['needs_cron'] = self._needs_cron()
         if not status['needs_cron']:
+            if status['mode'] == 'UDEV' and self._udev_ready() is False:
+                status['problem'] = 'udev'
             return status
         status['binary'] = self._cron_binary()
         if status['binary'] is None:
