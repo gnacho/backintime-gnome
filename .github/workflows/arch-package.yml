@@ -21,7 +21,7 @@ jobs:
 
       # A Git checkout is required: the REST source archive respects
       # export-ignore and therefore omits the packaging/ directory.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Prepare an unprivileged package builder
         run: |
