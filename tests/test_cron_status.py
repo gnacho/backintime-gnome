@@ -13,11 +13,13 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from bitgnome import backend as _backend
-from bitgnome.window import AUTOMATION_ERRORS, cron_fix_text, cron_warning
+from bitgnome.window import (AUTOMATION_ERRORS, cron_fix_text, cron_warning,
+                             next_copy_text)
 
 from helpers import TestApp, isolated_home
 
-CRON_UNITS = ('cronie.service', 'crond.service', 'fcron.service')
+CRON_UNITS = ('cronie.service', 'cron.service', 'crond.service',
+              'fcron.service')
 
 
 class CronStatusTests(unittest.TestCase):
@@ -99,6 +101,45 @@ class CronStatusTests(unittest.TestCase):
                       cron_fix_text({'problem': 'service'}))
         self.assertEqual(cron_fix_text({'problem': None}), '')
         self.assertIn('cron service not running', AUTOMATION_ERRORS)
+
+    def test_debian_unit_is_not_a_false_alarm(self):
+        """Debian and Ubuntu run cron.service, not cronie.service."""
+        status, _ = self._run('/usr/bin/crontab')
+        self.assertEqual(status['service'], 'active')
+        self.assertIsNone(status['problem'])
+
+    def test_no_loaded_unit_is_unknown_not_a_claim(self):
+        status, _ = self._run('/usr/bin/crontab', load='not-found')
+        self.assertEqual(status['service'], 'unknown')
+        self.assertIsNone(status['problem'])
+        self.assertIsNone(cron_warning(status))
+
+    def test_broken_systemctl_is_unknown(self):
+        run = mock.Mock(side_effect=OSError('dbus is on fire'))
+        with mock.patch.object(_backend.shutil, 'which',
+                              lambda name: '/usr/bin/systemctl'
+                              if name == 'systemctl' else '/usr/bin/crontab'), \
+                mock.patch.object(_backend.subprocess, 'run', run):
+            status = self.backend.cron_status()
+        self.assertEqual(status['service'], 'unknown')
+        self.assertIsNone(status['problem'])
+
+    def test_at_every_boot_needs_cron(self):
+        """The core writes a crontab @reboot line for this mode."""
+        self.set_mode('AT_EVERY_BOOT')
+        status, _ = self._run(None)
+        self.assertTrue(status['needs_cron'])
+        self.assertEqual(status['problem'], 'binary')
+
+    def test_next_copy_text_for_every_mode_that_used_to_lie(self):
+        self.assertEqual(next_copy_text('MINUTES_5'), 'la próxima, en menos de 5 minutos')
+        self.assertEqual(next_copy_text('HOURS_2'), 'la próxima, en menos de 2 horas')
+        self.assertEqual(next_copy_text('HOURS_12'), 'la próxima, en menos de 12 horas')
+        self.assertEqual(next_copy_text('DAY', (7, 30)), 'la próxima, mañana a las 07:30')
+        self.assertEqual(next_copy_text('AT_EVERY_BOOT'),
+                         'la próxima, cuando arranques el equipo')
+        self.assertEqual(next_copy_text('DISABLED'), 'la próxima, sin copias automáticas')
+        self.assertEqual(next_copy_text(''), 'sin programación')
 
     def test_automation_keeps_the_entry_when_only_the_service_is_down(self):
         """The crontab write succeeds, so enabling the daemon is enough."""

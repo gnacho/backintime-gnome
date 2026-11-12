@@ -413,7 +413,7 @@ class Backend:
             mode = getattr(self.cfg.scheduleMode(), 'name', '')
         except Exception:                 # noqa: BLE001
             return True
-        if mode in ('DISABLED', 'UDEV', 'AT_EVERY_BOOT'):
+        if mode in ('DISABLED', 'UDEV'):
             return True
         return bool(shutil.which('crontab') or shutil.which('fcrontab'))
 
@@ -464,7 +464,8 @@ class Backend:
         if binary and os.path.basename(binary) == 'fcrontab':
             units = ('fcron.service',)
         else:
-            units = ('cronie.service', 'crond.service', 'fcron.service')
+            units = ('cronie.service', 'cron.service', 'crond.service',
+                     'fcron.service')
         for unit in units:
             try:
                 out = subprocess.run(
@@ -481,7 +482,9 @@ class Backend:
                 continue
             return 'active' if values.get('ActiveState') == 'active' \
                 else 'inactive'
-        return 'inactive'
+        # No unit loaded, or systemctl hung: nothing can be claimed. Saying
+        # "stopped" here would show a banner over a working cron.
+        return 'unknown'
 
     def _needs_cron(self):
         """Whether the current schedule mode relies on cron."""
@@ -489,7 +492,10 @@ class Backend:
             mode = getattr(self.cfg.scheduleMode(), 'name', '')
         except Exception:                     # noqa: BLE001
             return False
-        return mode not in ('DISABLED', 'UDEV', 'AT_EVERY_BOOT')
+        # AT_EVERY_BOOT is a crontab @reboot line (common/schedule.py), so
+        # it needs cron as much as the time based modes do. Only DISABLED and
+        # UDEV are outside cron.
+        return mode not in ('DISABLED', 'UDEV')
 
     @staticmethod
     def _cron_binary():
@@ -529,7 +535,7 @@ class Backend:
             mode = getattr(self.cfg.scheduleMode(), 'name', '')
         except Exception:                 # noqa: BLE001
             return True
-        if mode in ('DISABLED', 'UDEV', 'AT_EVERY_BOOT'):
+        if mode in ('DISABLED', 'UDEV'):
             return True
         binary = shutil.which('crontab') or shutil.which('fcrontab')
         if binary is None:

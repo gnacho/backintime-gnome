@@ -233,14 +233,14 @@ class SettingsSheet(Adw.Window):
                     is None:
                 return False
             status = status if isinstance(status, dict) else {}
-            if not status.get('needs_cron'):
+            if error or not status:
+                text = 'No se pudo comprobar el estado de cron'
+            elif not status.get('needs_cron'):
                 text = 'No depende de cron'
             elif status.get('problem') == 'binary':
                 text = 'No hay cron instalado: no se ejecutará'
             elif status.get('problem') == 'service':
                 text = 'Cron instalado pero su servicio está parado'
-            elif error:
-                text = f'No se pudo comprobar: {error}'
             else:
                 text = 'Listo: cron está activo'
             self.schedule_status.subtitle.set_text(text)

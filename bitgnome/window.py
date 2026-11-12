@@ -59,6 +59,42 @@ AUTOMATION_ERRORS = {
 }
 
 
+NEXT_COPY_TEXT = {
+    'DISABLED': 'sin copias automáticas',
+    'AT_EVERY_BOOT': 'cuando arranques el equipo',
+    'MINUTES_5': 'en menos de 5 minutos',
+    'MINUTES_10': 'en menos de 10 minutos',
+    'MINUTES_30': 'en menos de 30 minutos',
+    'HOUR': 'en menos de una hora',
+    'HOURS_2': 'en menos de 2 horas',
+    'HOURS_4': 'en menos de 4 horas',
+    'HOURS_6': 'en menos de 6 horas',
+    'HOURS_12': 'en menos de 12 horas',
+    'CUSTOM_HOUR': 'a la hora configurada',
+    'REPEATEDLY': 'cuando el equipo lleve un rato encendido',
+    'WEEK': 'la semana que viene',
+    'MONTH': 'el mes que viene',
+    'YEAR': 'el año que viene',
+    'UDEV': 'cuando conectes la unidad',
+}
+
+
+def next_copy_text(mode_name, when=None):
+    """Human answer for "when is the next copy" for every schedule mode.
+
+    The enum names do not nest the way substring matching assumed: HOURS_2
+    contains "hour" and MINUTES_5 contains nothing, so the card used to
+    promise "in less than an hour" for a two hourly schedule and "no
+    automatic copies" for a five minute one.
+    """
+    mode_name = (mode_name or '').upper()
+    if mode_name == 'DAY' and when:
+        hour, minute = when
+        return f'la próxima, mañana a las {hour:02d}:{minute:02d}'
+    text = NEXT_COPY_TEXT.get(mode_name)
+    return f'la próxima, {text}' if text else 'sin programación'
+
+
 def cron_warning(status):
     """Banner text for a schedule that cannot run, or None when fine."""
     if not status or not status.get('problem'):
@@ -83,9 +119,10 @@ def cron_fix_text(status):
         return ('El paquete de cron está instalado pero su servicio no se '
                 'está ejecutando:\n\n'
                 '    sudo systemctl enable --now cronie.service\n\n'
+                'En Debian y Ubuntu el paquete es cron y la unidad '
+                'cron.service. Con fcron, fcron.service.\n\n'
                 'Comprueba el estado con:\n\n'
-                '    systemctl is-active cronie.service\n\n'
-                'Con fcron el servicio se llama fcron.service.')
+                '    systemctl is-active cronie.service')
     return ''
 
 
@@ -982,22 +1019,16 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _next_copy_text(self):
         try:
-            mode = str(self.cfg.scheduleMode()).lower()
+            mode = getattr(self.cfg.scheduleMode(), 'name', '')
         except Exception:  # noqa: BLE001
             return 'sin programación'
-        if 'hour' in mode:
-            return 'la próxima, en menos de una hora'
-        if 'day' in mode:
+        when = None
+        if mode == 'DAY':
             try:
-                hour, minute = self.cfg.scheduleHourMinute()
-                return f'la próxima, mañana a las {hour:02d}:{minute:02d}'
+                when = self.cfg.scheduleHourMinute()
             except Exception:  # noqa: BLE001
-                return 'la próxima, mañana'
-        if 'week' in mode:
-            return 'la próxima, la semana que viene'
-        if 'udev' in mode:
-            return 'cuando conectes la unidad'
-        return 'sin copias automáticas'
+                when = None
+        return next_copy_text(mode, when)
 
     def _retention_text(self):
         try:
