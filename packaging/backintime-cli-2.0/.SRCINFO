@@ -1,12 +1,13 @@
 pkgbase = backintime-cli-2.0
 	pkgdesc = Simple backup system inspired from the Flyback Project and TimeVault. CLI version, 2.0 series.
 	pkgver = 2.0.0rc2
-	pkgrel = 1
+	pkgrel = 2
 	url = https://github.com/bit-team/backintime
 	arch = any
 	license = GPL-2.0-or-later
 	makedepends = asciidoctor
 	makedepends = man-db
+	makedepends = pandoc
 	depends = openssh
 	depends = python-dbus
 	depends = python-keyring
@@ -18,6 +19,8 @@ pkgbase = backintime-cli-2.0
 	conflicts = backintime-cli
 	replaces = backintime-cli
 	source = backintime-2.0.0-rc2.tar.gz::https://github.com/bit-team/backintime/archive/refs/tags/v2.0.0-rc2.tar.gz
+	source = pluginmanager-known-plugins.patch
 	sha256sums = 352b5a800df65b398737dae43b7d286f73b6b7eee3e712b66327741802bf66c2
+	sha256sums = 5b6e1d931a5973c0ffc4aaa19b68720ac3d095a66e276d3a9b1573f54cb8d614
 
 pkgname = backintime-cli-2.0

@@ -2,7 +2,7 @@
 
 pkgname=backintime-cli-2.0
 pkgver=2.0.0rc2
-pkgrel=1
+pkgrel=2
 _pkgname=backintime
 _tag=2.0.0-rc2
 pkgdesc="Simple backup system inspired from the Flyback Project and TimeVault. CLI version, 2.0 series."
@@ -10,13 +10,20 @@ arch=(any)
 url="https://github.com/bit-team/backintime"
 license=(GPL-2.0-or-later)
 depends=(openssh python-dbus python-keyring python-packaging rsync sshfs)
-makedepends=(asciidoctor man-db)
+makedepends=(asciidoctor man-db pandoc)
 optdepends=('gocryptfs: encrypted profiles')
 provides=(backintime-cli)
 conflicts=(backintime-cli)
 replaces=(backintime-cli)
-source=("$_pkgname-$_tag.tar.gz::$url/archive/refs/tags/v$_tag.tar.gz")
-sha256sums=('352b5a800df65b398737dae43b7d286f73b6b7eee3e712b66327741802bf66c2')
+source=("$_pkgname-$_tag.tar.gz::$url/archive/refs/tags/v$_tag.tar.gz"
+        pluginmanager-known-plugins.patch)
+sha256sums=('352b5a800df65b398737dae43b7d286f73b6b7eee3e712b66327741802bf66c2'
+            '5b6e1d931a5973c0ffc4aaa19b68720ac3d095a66e276d3a9b1573f54cb8d614')
+
+prepare() {
+  cd "$srcdir/$_pkgname-$_tag"
+  patch -Np1 -i "$srcdir/pluginmanager-known-plugins.patch"
+}
 
 build() {
   cd "$srcdir/$_pkgname-$_tag/common"
