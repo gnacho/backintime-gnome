@@ -30,6 +30,7 @@ jobs:
 
       - name: Check that the tag matches pkgver
         if: github.ref_type == 'tag'
+        shell: bash
         run: |
           cd packaging/aur
           source PKGBUILD
