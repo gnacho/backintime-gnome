@@ -361,8 +361,7 @@ class RetentionDialog(Adw.Window):
         body.append(mine)
         self._buttons(body, on_settings)
 
-    @staticmethod
-    def _buttons(body, on_settings):
+    def _buttons(self, body, on_settings):
         buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END)
         if on_settings is not None:
             settings_btn = Gtk.Button(label='Abrir ajustes')
