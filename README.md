@@ -63,6 +63,14 @@ BACKINTIME_COMMON=/path/to/backintime-2.0.0-rc2/common backintime-gnome
 
 It installs `/usr/bin/backintime-gnome` and the *Back In Time (GNOME)* menu entry.
 
+Optional packages enable the automatic scheduling modes:
+
+- `cronie` provides `crontab` for cron-based schedules. After installing it,
+  enable its service with `sudo systemctl enable --now cronie.service`.
+- `backintime` provides the D-Bus service helper for udev-based schedules with
+  the stable 1.6.x core. It also installs the Qt6 interface, so it is not needed
+  unless that scheduling mode is used.
+
 ## Run
 
 ```bash
