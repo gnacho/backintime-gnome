@@ -256,6 +256,54 @@ class EncryptionUiTests(unittest.TestCase):
         self.assertFalse(dialog.get_visible())
 
 
+class EncryptionFailureTests(unittest.TestCase):
+    """A destination that vanished must be named as such."""
+
+    def setUp(self):
+        self.home = isolated_home(self)
+        self.backend = TestApp().backend
+
+    def test_write_probe_succeeds_on_a_normal_folder(self):
+        from bitgnome.encryption import write_probe
+
+        target = Path(self.home.name) / 'destino'
+        ok, message = write_probe(target)
+        self.assertTrue(ok, message)
+        self.assertFalse((target / '.rewind-write-probe').exists())
+
+    def test_write_probe_reports_a_read_only_destination(self):
+        from bitgnome.encryption import write_probe
+
+        target = Path(self.home.name) / 'solo-lectura'
+        target.mkdir()
+        os.chmod(target, 0o500)
+        self.addCleanup(os.chmod, target, 0o700)
+        ok, message = write_probe(target)
+        self.assertFalse(ok)
+        self.assertIn('permisos', message.lower())
+
+    def test_gocryptfs_failure_about_a_gone_device_is_explained(self):
+        from bitgnome.encryption import device_problem_text
+
+        raw = ('gocryptfs -init ... Warning: fsync failed: sync '
+               '/run/media/x/gocryptfs.conf.tmp: no such device | rename ... '
+               'input/output error | Return code: 24')
+        text = device_problem_text(raw)
+        self.assertIn('disco', text.lower())
+        self.assertIn('reintentar', text.lower())
+
+    def test_encryption_setup_refuses_a_read_only_destination(self):
+        target = Path(self.home.name) / 'ro'
+        target.mkdir()
+        os.chmod(target, 0o500)
+        self.addCleanup(os.chmod, target, 0o700)
+        mode_before = self.backend.profile_mode()
+        with self.assertRaises(RuntimeError) as caught:
+            self.backend.setup_local_gocryptfs(str(target), 'secreto',
+                                               save_in_keyring=False)
+        self.assertIn('permisos', str(caught.exception).lower())
+        self.assertEqual(self.backend.profile_mode(), mode_before)
+
 if __name__ == '__main__':
     result = unittest.main(exit=False)
     if result.result.wasSuccessful():
