@@ -22,7 +22,6 @@ class BackInTimeApp(Adw.Application):
         self._add_action('advanced-preferences', self._advanced_preferences)
         self._add_action('about', self._about)
         self._add_action('shortcuts', self._shortcuts)
-        self._add_action('toggle-theme', lambda *_: self._win('_toggle_dark'))
         self._add_action('first-run', lambda *_: self._win('open_wizard'))
         self._add_action('delete-snapshot',
                          lambda *_: self._win('delete_current_snapshot'))
