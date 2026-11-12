@@ -17,6 +17,7 @@ from gi.repository import Adw, GLib, Gtk, Pango  # noqa: E402
 from . import backend as _backend  # noqa: E402
 from . import ui  # noqa: E402
 from .backend import Worker  # noqa: E402
+from .encryption import destination_is_empty_or_initialized  # noqa: E402
 
 SCHEDULE_CHOICES = [
     ('hour', 'Cada hora', 'Para trabajo intenso'),
@@ -77,6 +78,9 @@ class FirstRunWizard(Adw.Window):
         self.extra_dirs = []
         self.frequency = 'day'
         self.destination = ''
+        self.encrypt = False
+        self.password = ''
+        self.password_confirm_value = ''
         self._running = False
         self._stop_requested = False
         self._stop_attempts = 0
@@ -133,6 +137,9 @@ class FirstRunWizard(Adw.Window):
 
     # -------------------------------------------------------------- render
     def _render(self):
+        if getattr(self, 'password_entry', None) is not None:
+            self.password = self.password_entry.get_text()
+            self.password_confirm_value = self.password_confirm.get_text()
         while child := self.card.get_first_child():
             self.card.remove(child)
 
@@ -273,6 +280,10 @@ class FirstRunWizard(Adw.Window):
     def _on_frequency(self, _btn, key):
         self.frequency = key
 
+    def _on_encrypt_toggled(self, btn):
+        self.encrypt = btn.get_active()
+        self._render()
+
     def _destination_editable(self):
         return 'local' in self.backend.profile_mode()
 
@@ -298,6 +309,31 @@ class FirstRunWizard(Adw.Window):
                           'cambia en Ajustes.')
         self.destination_note = note
         box.append(note)
+        if self.backend.profile_mode() in ('local', 'local_gocryptfs'):
+            encrypt = Gtk.CheckButton(label='Cifrar la copia')
+            encrypt.set_active(self.encrypt)
+            encrypt.connect('toggled', self._on_encrypt_toggled)
+            box.append(encrypt)
+        if self.encrypt:
+            backend = 'EncFS' if _backend.supports_encfs() else 'Gocryptfs'
+            detail = Gtk.Label(label=f'Cifrado con {backend}', xalign=0)
+            detail.add_css_class('rw-wiz-sub')
+            box.append(detail)
+            box.append(Gtk.Label(label='Contraseña', xalign=0))
+            self.password_entry = Gtk.PasswordEntry()
+            self.password_entry.set_text(self.password)
+            ui.a11y(self.password_entry, 'Contraseña del cifrado')
+            box.append(self.password_entry)
+            box.append(Gtk.Label(label='Confirmar contraseña', xalign=0))
+            self.password_confirm = Gtk.PasswordEntry()
+            self.password_confirm.set_text(self.password_confirm_value)
+            ui.a11y(self.password_confirm, 'Confirmar contraseña del cifrado')
+            box.append(self.password_confirm)
+            warning = Gtk.Label(
+                label='Guarda la contraseña en un lugar seguro: sin ella no '
+                      'podrás restaurar tus copias.', xalign=0, wrap=True)
+            warning.add_css_class('rw-wiz-sub')
+            box.append(warning)
         self.card.append(box)
 
     def _choose_destination(self, btn):
@@ -314,10 +350,14 @@ class FirstRunWizard(Adw.Window):
         freq = {key: title for key, title, _sub in SCHEDULE_CHOICES}
         folders = ' · '.join(os.path.basename(p.rstrip('/')) or p
                              for p in sorted(self.folders))
-        for title, value in (('Carpetas', folders or 'ninguna'),
-                             ('Frecuencia', freq.get(self.frequency, '')),
-                             ('Destino', self.destination or 'sin configurar'),
-                             ('Conservación', '2 años (limpieza automática)')):
+        rows = [('Carpetas', folders or 'ninguna'),
+                ('Frecuencia', freq.get(self.frequency, '')),
+                ('Destino', self.destination or 'sin configurar')]
+        if self.encrypt:
+            backend = 'EncFS' if _backend.supports_encfs() else 'Gocryptfs'
+            rows.append(('Cifrado', backend))
+        rows.append(('Conservación', '2 años (limpieza automática)'))
+        for title, value in rows:
             box.append(ui.row(title, value))
         self.card.append(box)
 
@@ -368,6 +408,17 @@ class FirstRunWizard(Adw.Window):
         if self._destination_editable() and not self.destination:
             self._toast('Elige un destino para las copias')
             return False
+        if self.encrypt:
+            if not destination_is_empty_or_initialized(self.destination):
+                self._toast('Elige una carpeta nueva o vacía para cifrar')
+                return False
+            password = self.password_entry.get_text()
+            if not password:
+                self._toast('Escribe una contraseña para el cifrado')
+                return False
+            if password != self.password_confirm.get_text():
+                self._toast('Las contraseñas no coinciden')
+                return False
         try:
             entries, seen = [], set()
             for item in self.preserved + [(p, 0) for p in sorted(self.folders)]:
@@ -379,14 +430,21 @@ class FirstRunWizard(Adw.Window):
             const = SCHEDULE_CONST.get(self.frequency, 'DISABLED')
             mode = getattr(self.cfg, const, self.cfg.NONE)
             self.cfg.setScheduleMode(mode)
-            if self._destination_editable() and self.destination:
-                self.backend.set_destination_path(self.destination)
             units = getattr(_backend.bitbase_module, 'TimeUnit', None)
             if units is not None:
                 self.cfg.setRemoveOldSnapshots(True, 2, units.YEAR)
-            if not ui.save(self.cfg):
-                self._toast('No se pudo guardar la configuración')
-                return False
+            if self.encrypt:
+                self.backend.setup_local_gocryptfs(
+                    self.destination, self.password_entry.get_text(),
+                    save_in_keyring=bool(getattr(
+                        _backend.tools, 'KEYRING_SUPPORTED', False)),
+                    use_ram_cache=True)
+            else:
+                if self._destination_editable() and self.destination:
+                    self.backend.set_destination_path(self.destination)
+                if not ui.save(self.cfg):
+                    self._toast('No se pudo guardar la configuración')
+                    return False
             self._applied = True
         except Exception as exc:  # noqa: BLE001
             self._toast(f'No se pudo guardar: {exc}')
