@@ -27,7 +27,8 @@ class DestinationTests(unittest.TestCase):
         self.backend.set_destination_path(str(missing))
         ok, error = self.backend.ensure_mounted()
         self.assertFalse(ok)
-        self.assertIn('destination', error.lower())
+        # The core translates this message: assert on the path, not the text.
+        self.assertIn(str(missing), error)
         self.assertIsNotNone(self.backend.destination_problem)
 
     def test_existing_local_destination_is_fine(self):

@@ -55,10 +55,7 @@ class SettingsSheet(Adw.Window):
         self.cfg = app.backend.cfg
         self.on_change = on_change
         self.schedule_status = None
-        if Adw.StyleManager.get_default().get_dark():
-            self.add_css_class('rw-dark')
-        Adw.StyleManager.get_default().connect(
-            'notify::dark', self._sync_theme)
+        ui.apply_theme(self)
 
         root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         root.add_css_class('rw-sheet')
@@ -122,13 +119,6 @@ class SettingsSheet(Adw.Window):
     def _show_error(self, message):
         if self._error_label is not None:
             self._error_label.set_text(message)
-
-    def _sync_theme(self, *_):
-        """The sheet is its own window, so it needs the class separately."""
-        if Adw.StyleManager.get_default().get_dark():
-            self.add_css_class('rw-dark')
-        else:
-            self.remove_css_class('rw-dark')
 
     def _save(self):
         ok = ui.save(self.cfg)
@@ -251,6 +241,8 @@ class SettingsSheet(Adw.Window):
             status = status if isinstance(status, dict) else {}
             if error or not status:
                 text = 'No se pudo comprobar el estado de cron'
+            elif status.get('problem') == 'udev':
+                text = 'Al conectar la unidad no está disponible'
             elif not status.get('needs_cron'):
                 text = 'No depende de cron'
             elif status.get('problem') == 'binary':

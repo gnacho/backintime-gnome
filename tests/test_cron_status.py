@@ -131,6 +131,15 @@ class CronStatusTests(unittest.TestCase):
         self.assertTrue(status['needs_cron'])
         self.assertEqual(status['problem'], 'binary')
 
+    def test_udev_mode_reports_the_missing_service_helper(self):
+        self.set_mode('UDEV')
+        status, _ = self._run(None)
+        self.assertFalse(status['needs_cron'])
+        if self.backend._udev_ready() is False:
+            self.assertEqual(status['problem'], 'udev')
+            self.assertIn('udev', cron_warning(status).lower())
+            self.assertIn('cron', cron_fix_text(status).lower())
+
     def test_next_copy_text_for_every_mode_that_used_to_lie(self):
         self.assertEqual(next_copy_text('MINUTES_5'), 'la próxima, en menos de 5 minutos')
         self.assertEqual(next_copy_text('HOURS_2'), 'la próxima, en menos de 2 horas')

@@ -9,6 +9,7 @@ gi.require_version('Adw', '1')
 from gi.repository import Adw, Gtk, Pango  # noqa: E402
 
 from bitgnome.backend import format_size  # noqa: E402
+from bitgnome import ui as _ui  # noqa: E402
 
 
 class RestoreDialog(Adw.Window):
@@ -17,6 +18,7 @@ class RestoreDialog(Adw.Window):
     def __init__(self, parent, backend, sid, rel_path, other_location=False):
         super().__init__(transient_for=parent, modal=True, title='Restaurar',
                          default_width=460)
+        _ui.apply_theme(self)
         self.backend = backend
         self.sid = sid
         self.rel = rel_path
@@ -105,7 +107,11 @@ class RestoreDialog(Adw.Window):
         if self.other_check.get_active():
             restore_to = self.other_entry.get_text().strip()
             if not restore_to:
+                self.other_entry.add_css_class('error')
+                self.other_entry.set_placeholder_text(
+                    'Elige una carpeta de destino')
                 return
+            self.other_entry.remove_css_class('error')
         if self.on_confirm:
             self.on_confirm(self.sid, self.rel, restore_to,
                             self.sw_delete.get_active(),
@@ -123,6 +129,7 @@ class LogViewDialog(Adw.Window):
                          default_width=760, default_height=520)
         self.backend = backend
         self.filter = 'all'
+        _ui.apply_theme(self)
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_content(box)
@@ -165,6 +172,17 @@ class LogViewDialog(Adw.Window):
 
     def _load(self):
         buf = self.view.get_buffer()
+        buf.set_text('cargando…')
+        from bitgnome.backend import Worker
+        token = getattr(self, '_load_token', 0) + 1
+        self._load_token = token
+        Worker(self.backend.snapshot_log,
+               lambda lines, error: self._fill(lines, error, token))
+
+    def _fill(self, lines, error, token):
+        if token != getattr(self, '_load_token', 0):
+            return False
+        buf = self.view.get_buffer()
         buf.set_text('')
         tags = {
             'I': buf.create_tag('i', foreground='#8ad8a0'),
@@ -173,10 +191,10 @@ class LogViewDialog(Adw.Window):
             'E': buf.create_tag('e', foreground='#ff8a8a'),
         }
         end = buf.get_end_iter()
-        try:
-            lines = list(self.backend.snapshot_log())
-        except Exception as exc:  # noqa: BLE001
-            lines = [f'No se pudo leer el registro: {exc}']
+        if error or lines is None:
+            lines = [f'No se pudo leer el registro: {error}']
+        else:
+            lines = list(lines)
         for line in lines:
             lv = 'I'
             if line.startswith('[E]') or 'ERROR' in line:
@@ -187,6 +205,7 @@ class LogViewDialog(Adw.Window):
                 continue
             buf.insert_with_tags(end, line + '\n', tags.get(lv))
             _, end = buf.get_bounds()
+        return False
 
 
 class DiffDialog(Adw.Window):
@@ -198,6 +217,7 @@ class DiffDialog(Adw.Window):
         super().__init__(transient_for=parent, modal=False,
                          title=f'Cambios - {name}',
                          default_width=820, default_height=560)
+        _ui.apply_theme(self)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_content(box)
         box.append(Adw.HeaderBar())
@@ -282,6 +302,7 @@ class RetentionDialog(Adw.Window):
     def __init__(self, parent, result, on_settings=None):
         super().__init__(transient_for=parent, modal=True, title='Retención',
                          default_width=760, default_height=620)
+        _ui.apply_theme(self)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_content(box)
         box.append(Adw.HeaderBar())
@@ -296,20 +317,46 @@ class RetentionDialog(Adw.Window):
         scroll.set_child(body)
 
         if result.get('engine_inert'):
+            if result.get('unsupported_unit'):
+                intro_text = (
+                    f'La retención está configurada en {result["label"]}, una '
+                    'unidad que el motor no soporta: solo aplica días, '
+                    'semanas y años. No se borrará ninguna instantánea.')
+                note_text = ('Cambia la conservación a 2 semanas, 1 año o 2 '
+                             'años para que el borrado automático funcione.')
+            else:
+                intro_text = (
+                    f'La retención está configurada en {result["label"]}, '
+                    'pero este núcleo de Back In Time no la aplica: '
+                    'removeOldSnapshotsDate() devuelve 1/1/1, así que no se '
+                    'borrará ninguna instantánea.')
+                note_text = ('No es un problema de esta aplicación: el motor '
+                             'instalado no ejecuta la retención. No hay '
+                             'archivos en riesgo por borrado automático.')
+            intro = Gtk.Label(label=intro_text, xalign=0, wrap=True)
+            intro.add_css_class('heading')
+            body.append(intro)
+            note = Gtk.Label(label=note_text, xalign=0, wrap=True)
+            note.add_css_class('dim-label')
+            body.append(note)
+            self._buttons(body, on_settings)
+            return
+
+        if not result.get('complete', True) and result.get('reason') == \
+                'unreadable' and not result.get('doomed'):
             intro = Gtk.Label(
-                label=f'La retención está configurada en {result["label"]}, '
-                      'pero este núcleo de Back In Time no la aplica: '
-                      'removeOldSnapshotsDate() devuelve 1/1/1 con cualquier '
-                      'unidad, así que no se borrará ninguna instantánea.',
+                label=f'La retención está en {result["label"]}, pero ahora '
+                      'mismo no se puede leer el destino, así que no se puede '
+                      'saber qué instantáneas se borrarían ni qué archivos se '
+                      'perderían.',
                 xalign=0, wrap=True)
             intro.add_css_class('heading')
             body.append(intro)
             note = Gtk.Label(xalign=0, wrap=True)
             note.add_css_class('dim-label')
-            note.set_text('Es un fallo de la versión 2.0.0-rc2 del motor, no '
-                          'de esta aplicación. Con 1.6.2 la retención sí se '
-                          'aplica. No hay archivos en riesgo por borrado '
-                          'automático mientras el motor no la ejecute.')
+            note.set_text('Conecta el destino y vuelve a revisar la '
+                          'retención. Las instantáneas con nombre no se '
+                          'borran nunca.')
             body.append(note)
             self._buttons(body, on_settings)
             return

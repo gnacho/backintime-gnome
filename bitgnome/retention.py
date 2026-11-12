@@ -4,9 +4,11 @@ The cutoff and the deletion rules are taken from the core, not re-invented:
 ``Config.removeOldSnapshotsDate()`` decides the date, the oldest snapshot is
 never removed, and named snapshots are kept when the profile says so.
 
-Two engines are handled honestly: 2.0.0-rc2 returns ``date(1, 1, 1)`` for
-every unit, so it never removes anything; the audit reports that instead of
-promising deletions that will not happen.
+Two different things are reported separately: a unit the core does not
+support (months and hours, which fall through to ``date(1, 1, 1)``) and an
+engine that never applies retention at all (2.0.0-rc2 before the backport).
+Blaming the version for an unsupported unit was wrong, and so was promising
+deletions of named snapshots whose names could not be read.
 """
 import datetime
 import os
@@ -67,9 +69,12 @@ def state(cfg):
         cutoff = NEVER
     if not isinstance(cutoff, datetime.date):
         cutoff = NEVER
+    supported = unit_name in ('DAY', 'WEEK', 'YEAR')
     return {'value': value, 'unit': unit_name,
             'label': f'{value} {singular if value == 1 else plural}',
-            'cutoff': cutoff, 'engine_inert': cutoff <= NEVER}
+            'cutoff': cutoff, 'engine_inert': cutoff <= NEVER,
+            'unsupported_unit': not supported,
+            'supported_units': sorted(('días', 'semanas', 'años'))}
 
 
 def plan(sids, cutoff, keep_named):
@@ -137,6 +142,7 @@ def audit(cfg, sids, budget=MAX_PATHS):
         return None
     if info['engine_inert']:
         return {'engine_inert': True, 'label': info['label'],
+                'unsupported_unit': info.get('unsupported_unit', False),
                 'cutoff': None, 'doomed': [], 'lost': [], 'superseded': 0,
                 'scanned': 0, 'complete': True, 'reason': None}
 
@@ -144,7 +150,19 @@ def audit(cfg, sids, budget=MAX_PATHS):
         keep_named = bool(cfg.dontRemoveNamedSnapshots())
     except Exception:  # noqa: BLE001
         keep_named = True
-    doomed_sids, survivors = plan(sids, info['cutoff'], keep_named)
+    # A snapshot whose directory cannot be read may well carry a name, and
+    # named snapshots are never removed. Saying "these will be deleted" from
+    # that state was a promise the engine would not keep.
+    readable = all(_backup_root(sid) and os.path.isdir(_backup_root(sid))
+                   for sid in sids)
+    doomed_sids, survivors = plan(sids, info['cutoff'],
+                                  keep_named or not readable)
+    if not readable:
+        return {'engine_inert': False,
+                'unsupported_unit': info.get('unsupported_unit', False),
+                'label': info['label'], 'cutoff': info['cutoff'],
+                'doomed': [], 'lost': [], 'superseded': 0, 'scanned': 0,
+                'complete': False, 'reason': 'unreadable'}
     if not doomed_sids:
         return None
 

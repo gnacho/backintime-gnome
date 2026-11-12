@@ -66,13 +66,23 @@ class ThemeAndWizardTests(unittest.TestCase):
 
     def test_dark_desktop_paints_the_dark_palette(self):
         self.manager.set_color_scheme(Adw.ColorScheme.FORCE_DARK)
-        self.win._sync_theme()
         self.assertTrue(self.win.has_css_class('rw-dark'))
 
     def test_light_desktop_keeps_the_light_palette(self):
         self.manager.set_color_scheme(Adw.ColorScheme.FORCE_LIGHT)
-        self.win._sync_theme()
         self.assertFalse(self.win.has_css_class('rw-dark'))
+
+    def test_dialogs_follow_the_theme_too(self):
+        from bitgnome.dialogs import RetentionDialog
+
+        self.manager.set_color_scheme(Adw.ColorScheme.FORCE_DARK)
+        dialog = RetentionDialog(None, {'engine_inert': True, 'label': '2 años'})
+        self.assertTrue(dialog.has_css_class('rw-dark'))
+        dialog.destroy()
+        self.manager.set_color_scheme(Adw.ColorScheme.FORCE_LIGHT)
+        dialog = RetentionDialog(None, {'engine_inert': True, 'label': '2 años'})
+        self.assertFalse(dialog.has_css_class('rw-dark'))
+        dialog.destroy()
 
     def test_theme_is_not_forced_by_the_app(self):
         self.assertFalse(hasattr(self.win, '_toggle_dark'))

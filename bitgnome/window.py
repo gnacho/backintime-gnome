@@ -102,6 +102,9 @@ def cron_warning(status):
     if status['problem'] == 'binary':
         return ('No hay cron instalado: las copias automáticas no se '
                 'ejecutarán')
+    if status['problem'] == 'udev':
+        return ('El modo «al conectar la unidad» no está disponible en esta '
+                'instalación: no hay servicio udev del núcleo.')
     return ('El servicio de cron está parado: las copias automáticas no se '
             'ejecutarán')
 
@@ -123,6 +126,14 @@ def cron_fix_text(status):
                 'cron.service. Con fcron, fcron.service.\n\n'
                 'Comprueba el estado con:\n\n'
                 '    systemctl is-active cronie.service')
+    if status.get('problem') == 'udev':
+        return ('Las copias al conectar la unidad las programa el paquete Qt '
+                'de Back In Time mediante un servicio udev por D-Bus, que no '
+                'está instalado.\n\n'
+                'Opciones:\n\n'
+                '  - Cambia la programación a una basada en cron (cada hora, '
+                'cada día o cada semana).\n'
+                '  - Instala el paquete Qt del núcleo si quieres ese modo.')
     return ''
 
 
@@ -166,9 +177,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._build_ui()
         self._build_shortcuts()
         self.connect('close-request', self._on_close_request)
-        self._sync_theme()
-        Adw.StyleManager.get_default().connect('notify::dark',
-                                               self._sync_theme)
+        ui.apply_theme(self)
 
         if self.backend.error:
             self._show_backend_error(self.backend.error)
@@ -312,6 +321,7 @@ class MainWindow(Adw.ApplicationWindow):
         to miss and says nothing when cron is installed but stopped.
         """
         self._cron_status = {}
+        self._cron_token = 0
         self.cron_label = Gtk.Label(xalign=0, wrap=True)
         self.cron_label.add_css_class('rw-cron-text')
         self.cron_label.set_hexpand(True)
@@ -335,7 +345,12 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _refresh_cron(self):
         """Re-read the schedule state off the main loop."""
+        self._cron_token += 1
+        token = self._cron_token
+
         def done(status, error):
+            if token != self._cron_token:
+                return False
             self._cron_status = status if isinstance(status, dict) else {}
             text = cron_warning(self._cron_status)
             if text:
@@ -667,17 +682,6 @@ class MainWindow(Adw.ApplicationWindow):
         self._settings_sheet = sheet
         sheet.present()
 
-    def _sync_theme(self, *_):
-        """Repaint for the system theme; time mode keeps its own palette.
-
-        The stylesheet is written for a light desktop, so the dark surfaces
-        are a second block switched by a class. Nothing is forced: the app
-        follows ``Adw.StyleManager``, which tracks the desktop setting.
-        """
-        if Adw.StyleManager.get_default().get_dark():
-            self.add_css_class('rw-dark')
-        else:
-            self.remove_css_class('rw-dark')
 
     def busy_reason(self):
         """Why a reload cannot happen right now, or None.
@@ -750,6 +754,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._update_hero()
         self._apply_mode()
         self.render_files()
+        self._refresh_search()
 
     def _current_sid(self):
         if self.index is None or not self.chrono:
@@ -779,6 +784,18 @@ class MainWindow(Adw.ApplicationWindow):
             self.set_snapshot(0)
         else:
             self.set_snapshot(target)
+
+    def _refresh_search(self):
+        """Keep the results in sync with the point being shown."""
+        text = self.search.get_text().strip()
+        if len(text) < 2:
+            return
+        self._search_token += 1
+        token = self._search_token
+        if self._search_source is not None:
+            GLib.source_remove(self._search_source)
+            self._search_source = None
+        self._run_search(text, token)
 
     def _on_search_changed(self, *_):
         text = self.search.get_text().strip()
@@ -929,6 +946,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.index = target
         self._apply_mode()
         self.render_files()
+        self._refresh_search()
 
     def _apply_mode(self):
         in_time = self.index is not None
@@ -1156,14 +1174,21 @@ class MainWindow(Adw.ApplicationWindow):
         except Exception:  # noqa: BLE001
             return None
 
-    def _deltas(self):
-        """Cached badges for the current point and folder."""
+    def _deltas(self, entry_count=0):
+        """Cached badges for the current point and folder.
+
+        A big folder is left to ``_schedule_deltas``: computing it here ran on
+        the UI thread and made the worker unreachable, because the result was
+        cached before the worker could be asked for it.
+        """
         key = self._delta_key()
         if key is None:
             return set(), set()
         cached = self._delta_cache.get(key)
         if cached is not None:
             return cached
+        if entry_count >= 600:
+            return set(), set()
         return self._compute_deltas()
 
     def _compute_deltas(self):
@@ -1294,7 +1319,7 @@ class MainWindow(Adw.ApplicationWindow):
             return
         if query:
             entries = [e for e in entries if query in e['name'].lower()]
-        changed, gone = self._deltas()
+        changed, gone = self._deltas(len(entries))
         self._schedule_deltas(entries)
 
         if not entries:

@@ -4,7 +4,8 @@ import datetime
 import gi
 
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gdk, Gtk, Pango  # noqa: E402
+gi.require_version('Adw', '1')
+from gi.repository import Adw, Gdk, Gtk, Pango  # noqa: E402
 
 def has_icon(name):
     """Whether the icon theme knows ``name`` (the app artwork may be absent)."""
@@ -121,16 +122,42 @@ def group_title(text):
     return label
 
 
+def apply_theme(window):
+    """Make any window follow the desktop theme.
+
+    The stylesheet is written for a light desktop, so the dark surfaces hang
+    off the ``rw-dark`` class. Doing it only on the main window left the
+    settings sheet, the profile manager and every dialog painted light over
+    dark libadwaita widgets.
+    """
+    manager = Adw.StyleManager.get_default()
+
+    def sync(*_args):
+        if manager.get_dark():
+            window.add_css_class('rw-dark')
+        else:
+            window.remove_css_class('rw-dark')
+
+    sync()
+    handler = manager.connect('notify::dark', sync)
+    window.connect('destroy', lambda *_: manager.disconnect(handler))
+    window._theme_handler = handler
+    return window
+
+
 def segmented(options, current, on_change):
     """Pill segment control. ``options`` is [(value, label), ...]."""
     box = Gtk.Box(spacing=2)
     box.add_css_class('rw-seg')
     buttons = {}
+    state = {'value': current}
 
     def select(value, notify=True):
+        changed = value != state['value']
+        state['value'] = value
         for val, btn in buttons.items():
             btn.set_active(val == value)
-        if notify:
+        if notify and changed:
             on_change(value)
 
     for value, label in options:

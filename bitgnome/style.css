@@ -392,6 +392,7 @@ button.rw-soft:hover {
  * it comes later in the file. */
 window.rw-dark {
   background-color: #160d2c;
+  color: #f2eefc;
 }
 
 window.rw-dark .rw-root {
