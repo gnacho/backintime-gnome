@@ -345,7 +345,8 @@ class Backend:
         """
         from pathlib import Path
         import core_events
-        from .encryption import destination_is_empty_or_initialized
+        from .encryption import (destination_is_empty_or_initialized,
+                                 device_problem_text, write_probe)
 
         if self.cfg is None:
             raise RuntimeError(self.error or 'Núcleo no disponible')
@@ -386,6 +387,9 @@ class Backend:
             self.release_mount()
             self._snapshots = None
             Path(destination).mkdir(parents=True, exist_ok=True)
+            writable, probe_error = write_probe(destination)
+            if not writable:
+                raise RuntimeError(probe_error)
             self.cfg.setSnapshotsMode(mode)
             self.cfg.setLocalGocryptfsPath(
                 str(destination), self.current_profile())
@@ -434,7 +438,7 @@ class Backend:
             self._snapshots = None
             self.release_mount()
             message = getattr(exc, 'gui_msg', None) or str(exc)
-            raise RuntimeError(message) from exc
+            raise RuntimeError(device_problem_text(message)) from exc
         finally:
             if manager is not None:
                 try:

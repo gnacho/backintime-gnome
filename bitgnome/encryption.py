@@ -1,5 +1,6 @@
 """Guided encrypted-profile setup shared by settings and the wizard."""
 import json
+import os
 from pathlib import Path
 
 import gi
@@ -31,8 +32,55 @@ def destination_is_empty_or_initialized(path):
         return False
 
 
+DEVICE_GONE_MARKERS = (
+    'no such device', 'input/output error', 'read-only file system',
+    'transport endpoint is not connected', 'device not configured',
+)
+
+
+def device_problem_text(text):
+    """Point at the disk when the error is the disk.
+
+    A USB drive that drops off the bus makes gocryptfs fail with rc 24 and a
+    raw ENODEV while fsyncing. Showing that to the user hides the only thing
+    that matters: the destination is gone, not the password or the folder.
+    """
+    lowered = (text or '').lower()
+    if 'permission denied' in lowered or 'permiso denegado' in lowered:
+        return ('La carpeta de destino no admite escritura con tu usuario. '
+                'Elige otra carpeta o revisa los permisos.')
+    if any(marker in lowered for marker in DEVICE_GONE_MARKERS):
+        return ('El disco de destino se ha desconectado o ha pasado a solo '
+                'lectura durante la operación. Comprueba el cable y el puerto, '
+                'vuelve a conectarlo y revisa el estado del disco (por ejemplo '
+                'con `sudo smartctl -a` y un `fsck` de la partición) antes de '
+                'reintentar.')
+    return text or 'Error desconocido del motor'
+
+
+def write_probe(path):
+    """Write, fsync, rename and delete a tiny file in the destination.
+
+    Returns ``(ok, message)``. Doing this before ``gocryptfs -init`` fails
+    early and in plain words when the disk is gone, instead of leaving a half
+    initialized store behind.
+    """
+    try:
+        destination = Path(path)
+        destination.mkdir(parents=True, exist_ok=True)
+        probe = destination / '.rewind-write-probe'
+        with probe.open('wb') as handle:
+            handle.write(b'probe')
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.rename(probe, probe.with_suffix('.probe'))
+        probe.with_suffix('.probe').unlink()
+        return True, ''
+    except OSError as exc:
+        return False, device_problem_text(f'{exc.strerror or exc}: {exc}')
+
+
 class EncryptionSetupDialog(Adw.Window):
-    """Collect destination and credentials for an encrypted profile."""
 
     def __init__(self, parent, on_done=None):
         super().__init__(transient_for=parent, modal=True,
