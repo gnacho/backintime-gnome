@@ -253,6 +253,7 @@ class MainWindow(Adw.ApplicationWindow):
         section.append('Revisar retención', 'app.retention')
         menu.append_section(None, section)
         section2 = Gio.Menu()
+        section2.append('Asistente de configuración', 'app.first-run')
         section2.append('Gestionar perfiles', 'app.advanced-preferences')
         section2.append('Atajos de teclado', 'app.shortcuts')
         section2.append('Acerca de Back In Time', 'app.about')

@@ -43,6 +43,11 @@ class BackInTimeApp(Adw.Application):
 
     def _win(self, method, *args):
         win = self.get_active_window()
+        if win is None:
+            # Without focus get_active_window() is None and menu actions
+            # would silently do nothing.
+            windows = self.get_windows()
+            win = windows[0] if windows else None
         if win:
             getattr(win, method)(*args)
 
