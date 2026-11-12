@@ -7,6 +7,7 @@ pkgbase = backintime-cli-2.0
 	license = GPL-2.0-or-later
 	makedepends = asciidoctor
 	makedepends = man-db
+	makedepends = pandoc
 	depends = openssh
 	depends = python-dbus
 	depends = python-keyring
