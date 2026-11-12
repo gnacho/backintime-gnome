@@ -52,6 +52,43 @@ def _icon_for(name, is_dir):
     return FILE_ICONS.get(ext, 'text-x-generic-symbolic')
 
 
+AUTOMATION_ERRORS = {
+    'no crontab installed': 'No hay cron instalado',
+    'cron service not running': 'El servicio de cron no está corriendo',
+    'crontab not updated': 'El crontab no se pudo actualizar',
+}
+
+
+def cron_warning(status):
+    """Banner text for a schedule that cannot run, or None when fine."""
+    if not status or not status.get('problem'):
+        return None
+    if status['problem'] == 'binary':
+        return ('No hay cron instalado: las copias automáticas no se '
+                'ejecutarán')
+    return ('El servicio de cron está parado: las copias automáticas no se '
+            'ejecutarán')
+
+
+def cron_fix_text(status):
+    """Exact commands for the problem reported in ``status``."""
+    status = status or {}
+    if status.get('problem') == 'binary':
+        return ('Instala un gestor de cron y actívalo:\n\n'
+                '    sudo pacman -S --needed cronie\n'
+                '    sudo systemctl enable --now cronie.service\n\n'
+                'Vuelve a abrir la ventana para que se escriba la entrada '
+                'de las copias automáticas.')
+    if status.get('problem') == 'service':
+        return ('El paquete de cron está instalado pero su servicio no se '
+                'está ejecutando:\n\n'
+                '    sudo systemctl enable --now cronie.service\n\n'
+                'Comprueba el estado con:\n\n'
+                '    systemctl is-active cronie.service\n\n'
+                'Con fcron el servicio se llama fcron.service.')
+    return ''
+
+
 class MainWindow(Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, title='Rewind')
@@ -120,6 +157,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.body = root
 
         root.append(self._build_header())
+        root.append(self._build_cron_banner())
 
         self.toast_overlay = Adw.ToastOverlay()
         self.toast_overlay.set_vexpand(True)
@@ -225,6 +263,58 @@ class MainWindow(Adw.ApplicationWindow):
         ui.a11y(menu_btn, 'Menú principal')
         header.pack_end(menu_btn)
         return header
+
+    def _build_cron_banner(self):
+        """Persistent warning for a schedule that cannot run.
+
+        A 4 second toast at startup was the only signal before, which is easy
+        to miss and says nothing when cron is installed but stopped.
+        """
+        self._cron_status = {}
+        self.cron_label = Gtk.Label(xalign=0, wrap=True)
+        self.cron_label.add_css_class('rw-cron-text')
+        self.cron_label.set_hexpand(True)
+        icon = Gtk.Image(icon_name='dialog-warning-symbolic')
+        icon.add_css_class('rw-cron-icon')
+        button = Gtk.Button(label='Cómo arreglarlo')
+        button.add_css_class('rw-soft')
+        button.connect('clicked', lambda *_: self._explain_cron())
+        ui.a11y(button, 'Cómo arreglar las copias automáticas')
+        box = Gtk.Box(spacing=10)
+        box.add_css_class('rw-cron-banner')
+        box.append(icon)
+        box.append(self.cron_label)
+        box.append(button)
+        self.cron_revealer = Gtk.Revealer()
+        self.cron_revealer.set_transition_type(
+            Gtk.RevealerTransitionType.SLIDE_DOWN)
+        self.cron_revealer.set_child(box)
+        self.cron_revealer.set_reveal_child(False)
+        return self.cron_revealer
+
+    def _refresh_cron(self):
+        """Re-read the schedule state off the main loop."""
+        def done(status, error):
+            self._cron_status = status if isinstance(status, dict) else {}
+            text = cron_warning(self._cron_status)
+            if text:
+                self.cron_label.set_text(text)
+            self.cron_revealer.set_reveal_child(bool(text))
+            return False
+
+        Worker(self.backend.cron_status, done)
+
+    def _explain_cron(self):
+        text = cron_fix_text(self._cron_status)
+        if not text:
+            return
+        dialog = Adw.MessageDialog(
+            transient_for=self, heading='Copias automáticas', body=text)
+        dialog.add_css_class('rw-dialog')
+        dialog.add_response('close', 'Cerrar')
+        dialog.set_default_response('close')
+        dialog.present()
+        self._cron_dialog = dialog
 
     def _build_hero(self):
         self.hero = Gtk.Box(spacing=22)
@@ -486,9 +576,13 @@ class MainWindow(Adw.ApplicationWindow):
         Worker(work, done)
 
     def _automation_done(self, created, error):
-        if error or created is False:
-            self.toast('No hay cron instalado: las copias automáticas no se '
-                       'ejecutarán', 'Abrir ajustes', self.open_settings)
+        self._refresh_cron()
+        if error:
+            reason = AUTOMATION_ERRORS.get(
+                str(self.backend.last_automation_error), str(error))
+            self.toast(f'No se pudo programar la copia: {reason}')
+        elif created is False:
+            self.toast('No se pudo programar la copia automática')
         return False
 
     def _maybe_wizard(self):
@@ -517,10 +611,14 @@ class MainWindow(Adw.ApplicationWindow):
             existing.present()
             return existing
         from bitgnome.wizard import FirstRunWizard
-        wizard = FirstRunWizard(self.app, on_done=self.reload_snapshots)
+        wizard = FirstRunWizard(self.app, on_done=self._wizard_done)
         self._wizard = wizard
         wizard.present()
         return wizard
+
+    def _wizard_done(self):
+        self.reload_snapshots()
+        self._refresh_cron()
 
     def open_settings(self):
         from bitgnome.settings_sheet import SettingsSheet
@@ -535,6 +633,7 @@ class MainWindow(Adw.ApplicationWindow):
             else Adw.ColorScheme.FORCE_DARK)
 
     def _on_settings_changed(self, reload=False, retention=False):
+        self._refresh_cron()
         if retention:
             self._retention_result = None
             self._retention_sig = None
