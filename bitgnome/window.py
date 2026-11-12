@@ -322,6 +322,7 @@ class MainWindow(Adw.ApplicationWindow):
         """
         self._cron_status = {}
         self._cron_token = 0
+        self._password_dialog = None
         self.cron_label = Gtk.Label(xalign=0, wrap=True)
         self.cron_label.add_css_class('rw-cron-text')
         self.cron_label.set_hexpand(True)
@@ -615,6 +616,9 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _prepare_profile(self):
         """Mount (if needed) and load the snapshots of the current profile."""
+        if not self.backend.password_available():
+            self._ask_password()
+            return
 
         def work():
             self.backend.release_mount()
@@ -630,6 +634,23 @@ class MainWindow(Adw.ApplicationWindow):
             return False
 
         Worker(work, done)
+
+    def _ask_password(self):
+        if self._password_dialog is not None:
+            return
+        from bitgnome.dialogs import PasswordDialog
+        dialog = PasswordDialog(self, self._on_password_entered)
+        self._password_dialog = dialog
+        dialog.present()
+
+    def _on_password_entered(self, password):
+        self._password_dialog = None
+        try:
+            self.backend.set_profile_password(password)
+        except Exception as exc:          # noqa: BLE001
+            self.toast(f'No se pudo guardar la contraseña: {exc}')
+            return
+        self._prepare_profile()
 
     def _automation_done(self, created, error):
         self._refresh_cron()

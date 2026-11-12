@@ -430,6 +430,63 @@ class RetentionDialog(Adw.Window):
         return _text_view(text)
 
 
+class PasswordDialog(Adw.Window):
+    """Ask for the password of an encrypted profile.
+
+    The core would otherwise read it from stdin (``getpass``), which in a GTK
+    app hangs or fails the mount.
+    """
+
+    def __init__(self, parent, on_accept):
+        super().__init__(transient_for=parent, modal=True,
+                         title='Desbloquear el perfil cifrado',
+                         default_width=420, resizable=False)
+        _ui.apply_theme(self)
+        self.on_accept = on_accept
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        box.set_margin_top(20)
+        box.set_margin_bottom(18)
+        box.set_margin_start(20)
+        box.set_margin_end(20)
+        self.set_content(box)
+
+        title = Gtk.Label(label='Este perfil guarda las copias cifradas',
+                          xalign=0, wrap=True)
+        title.add_css_class('heading')
+        box.append(title)
+        hint = Gtk.Label(label='Escribe la contraseña del perfil para leer '
+                               'las instantáneas.', xalign=0, wrap=True)
+        hint.add_css_class('dim-label')
+        box.append(hint)
+
+        self.entry = Gtk.PasswordEntry(show_peek_icon=True)
+        self.entry.set_property('placeholder-text', 'Contraseña')
+        self.entry.connect('activate', lambda *_: self._accept())
+        box.append(self.entry)
+
+        buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END)
+        cancel = Gtk.Button(label='Cancelar')
+        cancel.connect('clicked', lambda *_: self.close())
+        accept = Gtk.Button(label='Desbloquear')
+        accept.add_css_class('suggested-action')
+        accept.connect('clicked', lambda *_: self._accept())
+        buttons.append(cancel)
+        buttons.append(accept)
+        box.append(buttons)
+
+    def _accept(self):
+        password = self.entry.get_text()
+        if not password:
+            self.entry.add_css_class('error')
+            return
+        self.entry.remove_css_class('error')
+        callback, self.on_accept = self.on_accept, None
+        self.close()
+        if callback:
+            callback(password)
+
+
 def _text_view(text):
     view = Gtk.TextView(editable=False, monospace=True, top_margin=6,
                         bottom_margin=6, left_margin=8, right_margin=8)
