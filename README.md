@@ -131,11 +131,18 @@ that layout is **Rewind**; the package and the repository keep the
 - **Mounts and profiles**: SSH and encrypted destinations stay mounted while the
   app is open, so browsing a point in time works; the selected profile is
   remembered across restarts in `~/.config/backintime-gnome/state.ini`.
+- **Guided local encryption**: the wizard and the settings sheet can create a
+  local Gocryptfs profile on the 2.0 core. The app validates the password,
+  initializes the destination through Back In Time's mount manager, checks the
+  decrypted snapshot path and only then persists the profile. Passwords never go
+  to the Rewind configuration or logs. Existing Gocryptfs destinations are
+  accepted; a non-empty directory without `gocryptfs.conf` is rejected.
 - **Settings sheet**: watched folders, frequency, failure notifications,
-  destination and retention on top; excludes, SSH, smart removal, rsync
-  options, log level and profiles folded into expanders. The complete *Manage
-  profiles* window (encryption modes, udev, keys, custom schedules) stays one
-  click away, so no option is lost.
+  destination, encryption and retention on top; excludes, SSH, smart removal,
+  rsync options, log level and profiles folded into expanders. The complete
+  *Manage profiles* window (udev, keys, custom schedules) stays one click away.
+  Selecting a local encrypted mode there opens the same guided flow instead of
+  saving the mode without credentials.
 - **First-run wizard**: folders, frequency, destination, summary and the first
   backup with live progress.
 - Light/dark theme follows the desktop in present mode; time mode is always

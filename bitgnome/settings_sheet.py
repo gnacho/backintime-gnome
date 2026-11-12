@@ -212,7 +212,7 @@ class SettingsSheet(Adw.Window):
     def _build_destination(self):
         self.body.append(ui.group_title('Dónde'))
         mode, path = self.backend.profile_summary()
-        local = 'local' in self.backend.profile_mode()
+        local = self.backend.profile_mode() == 'local'
         change = Gtk.Button(label='Cambiar…')
         change.add_css_class('rw-soft')
         change.set_sensitive(local)
@@ -223,6 +223,34 @@ class SettingsSheet(Adw.Window):
                         'Gestionar perfiles')
         self.destination_row = ui.row(f'Destino ({mode})', subtitle, change)
         self.body.append(self.destination_row)
+        encrypted = ('gocryptfs' in mode or 'encfs' in mode)
+        if encrypted:
+            backend = 'EncFS' if 'encfs' in mode else 'Gocryptfs'
+            encrypt_subtitle = f'Cifrado activo ({backend})'
+            encrypt_label = 'Configurar cifrado…'
+        else:
+            encrypt_subtitle = 'Protege el contenido de las copias'
+            encrypt_label = 'Cifrar copia…'
+        encrypt = Gtk.Button(label=encrypt_label)
+        encrypt.add_css_class('rw-soft')
+        encrypt.connect('clicked', self._open_encryption_setup)
+        if encrypted and ('encfs' in mode or 'ssh' in mode):
+            encrypt.set_sensitive(False)
+            kind = 'SSH' if 'ssh' in mode else 'EncFS legado'
+            encrypt_subtitle = f'Cifrado {kind}; usa Gestionar perfiles'
+        self.body.append(ui.row('Cifrado', encrypt_subtitle, encrypt))
+
+    def _open_encryption_setup(self, _btn):
+        from .encryption import EncryptionSetupDialog
+        self.encryption_dialog = EncryptionSetupDialog(
+            self, on_done=self._encryption_applied)
+        self.encryption_dialog.present()
+
+    def _encryption_applied(self, destination):
+        if self.destination_row.subtitle is not None:
+            self.destination_row.subtitle.set_text(destination)
+        if self.on_change:
+            self.on_change(reload=True)
 
     def _change_destination(self, _btn):
         if self.backend.busy_backup:

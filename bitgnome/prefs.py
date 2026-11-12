@@ -204,9 +204,35 @@ class PreferencesWindow(Adw.PreferencesWindow):
 
     def _on_mode_changed(self, row, *_):
         mode = _MODES[row.get_selected()]
+        current = self.backend.profile_mode()
+        if mode != current and mode == 'local_gocryptfs':
+            row.set_selected(_mode_index(current))
+            from .encryption import EncryptionSetupDialog
+            self.encryption_dialog = EncryptionSetupDialog(
+                self, on_done=self._encryption_applied)
+            self.encryption_dialog.present()
+            return
+        if mode != current and ('gocryptfs' in mode or 'encfs' in mode):
+            row.set_selected(_mode_index(current))
+            kind = 'SSH' if 'ssh' in mode else 'EncFS'
+            dialog = Adw.MessageDialog(
+                transient_for=self, modal=True,
+                heading=f'Cifrado {kind}',
+                body='Este modo necesita un flujo guiado que todavía no está '
+                     'disponible. Usa Gestionar perfiles con un perfil '
+                     'existente o crea uno nuevo antes de cambiar el modo.')
+            dialog.add_response('close', 'Cerrar')
+            dialog.present()
+            return
         self.cfg.setSnapshotsMode(mode)
         self._save()
         self._update_ssh_visibility(mode)
+
+    def _encryption_applied(self, destination):
+        self.mode_row.set_selected(
+            _mode_index(self.backend.profile_mode()))
+        self.path_entry.set_text(destination)
+        self._update_ssh_visibility(self.backend.profile_mode())
 
     def _update_ssh_visibility(self, mode):
         self.ssh_group.set_visible('ssh' in mode)

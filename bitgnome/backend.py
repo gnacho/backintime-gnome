@@ -301,6 +301,112 @@ class Backend:
         else:
             self.cfg.set_snapshots_path(path)
 
+    def setup_local_gocryptfs(self, destination, password,
+                              save_in_keyring=False, use_ram_cache=True):
+        """Initialize and validate a local Gocryptfs profile safely.
+
+        The password is kept in the core's in-memory store while mounting.
+        Keyring or RAM-cache persistence is only enabled after validation.
+        """
+        from pathlib import Path
+        import core_events
+        from .encryption import destination_is_empty_or_initialized
+
+        if self.cfg is None:
+            raise RuntimeError(self.error or 'Núcleo no disponible')
+        previous_mode = self.profile_mode()
+        if previous_mode not in ('local', 'local_gocryptfs'):
+            raise RuntimeError(
+                'El alta guiada solo está disponible para perfiles locales')
+        previous_path = self.destination_path()
+        same_path = (os.path.realpath(destination) ==
+                     os.path.realpath(previous_path or ''))
+        if previous_mode == 'local_gocryptfs' and not same_path:
+            raise RuntimeError(
+                'No cambies el destino de un perfil cifrado desde aquí. '
+                'Crea un perfil nuevo para conservar las copias anteriores.')
+        if previous_mode != 'local_gocryptfs' and self.list_snapshots():
+            raise RuntimeError(
+                'El perfil actual ya tiene copias. Crea un perfil nuevo '
+                'para no ocultar las instantáneas sin cifrar.')
+        if not destination_is_empty_or_initialized(destination):
+            raise RuntimeError(
+                'Elige una carpeta nueva o vacía, o un destino Gocryptfs '
+                'ya inicializado')
+        if tools.which('gocryptfs') is None:
+            raise RuntimeError('Gocryptfs no está instalado')
+
+        previous_save = self.cfg.passwordSave()
+        previous_cache = self.cfg.passwordUseCache()
+        previous_password = None
+        if previous_mode == 'local_gocryptfs' and not password:
+            previous_password = self.cfg.get_encryption_password()
+            password = previous_password
+        if not password:
+            raise RuntimeError('Escribe una contraseña para el cifrado')
+
+        mode = 'local_gocryptfs'
+        manager = None
+        try:
+            self.release_mount()
+            self._snapshots = None
+            Path(destination).mkdir(parents=True, exist_ok=True)
+            self.cfg.setSnapshotsMode(mode)
+            self.cfg.setLocalGocryptfsPath(
+                str(destination), self.current_profile())
+            self.cfg.setPasswordSave(False, mode=mode)
+            self.cfg.setPasswordUseCache(False, mode=mode)
+            self.cfg.setPassword(password, mode=mode, pw_id=1)
+
+            manager = mount.MountManager.create(self.cfg)
+            manager.mount()
+            errors = []
+
+            def collect_error(message):
+                errors.append(str(message))
+
+            core_events.event_error.register(collect_error)
+            try:
+                valid = tools.validate_and_prepare_snapshots_path(
+                    path=manager.path,
+                    host_user_profile=self.cfg.hostUserProfile(),
+                    mode=mode,
+                    copy_links=self.cfg.copyLinks(),
+                    error_event=core_events.event_error,
+                )
+            finally:
+                core_events.event_error.deregister(collect_error)
+            if not valid:
+                detail = errors[-1] if errors else 'Destino no válido'
+                raise RuntimeError(detail)
+
+            self.cfg.setPasswordSave(save_in_keyring, mode=mode)
+            self.cfg.setPasswordUseCache(use_ram_cache, mode=mode)
+            self.cfg.setPassword(password, mode=mode, pw_id=1)
+            self.cfg.save()
+        except Exception as exc:
+            try:
+                self.cfg.setSnapshotsMode(previous_mode)
+                self.set_destination_path(previous_path or '')
+                self.cfg.setPasswordSave(previous_save, mode=previous_mode)
+                self.cfg.setPasswordUseCache(
+                    previous_cache, mode=previous_mode)
+                if previous_password:
+                    self.cfg.setPassword(
+                        previous_password, mode=previous_mode, pw_id=1)
+            except Exception as restore_error:  # noqa: BLE001
+                logger.debug(f'Could not restore profile: {restore_error}')
+            self._snapshots = None
+            self.release_mount()
+            message = getattr(exc, 'gui_msg', None) or str(exc)
+            raise RuntimeError(message) from exc
+        finally:
+            if manager is not None:
+                try:
+                    self.unmount_manager(manager)
+                except Exception as exc:  # noqa: BLE001
+                    logger.debug(f'Could not unmount setup destination: {exc}')
+
     def automation_supported(self):
         """Whether the loaded core can install the schedule for this mode."""
         try:
@@ -424,11 +530,31 @@ class Backend:
         self._mount_manager = manager
         return True, None
 
+    @staticmethod
+    def unmount_manager(manager):
+        """Unmount a core manager, including the FUSE3-only Arch layout."""
+        try:
+            manager.umount()
+            return
+        except Exception as original:      # noqa: BLE001
+            path = getattr(manager, 'path', None)
+            if path is None or not tools.is_mounted(path):
+                raise
+            binary = shutil.which('fusermount3') or shutil.which('fusermount')
+            if binary is None:
+                raise
+            result = subprocess.run(
+                [binary, '-u', str(path)], capture_output=True, text=True,
+                check=False)
+            if result.returncode != 0:
+                raise original
+            logger.debug(f'Unmounted with fallback binary: {binary}')
+
     def release_mount(self):
         if self._mount_manager is None:
             return
         try:
-            self._mount_manager.umount()
+            self.unmount_manager(self._mount_manager)
         except Exception:                 # noqa: BLE001
             pass
         finally:
@@ -442,15 +568,18 @@ class Backend:
         mounting and unmounting around every call.
         """
         if self._mount_manager is not None:
-            yield str(self._mount_manager.path)
+            yield self._mount_manager.path
             return
         manager_cls = getattr(mount, 'MountManager', None) if mount else None
         if manager_cls is None:
             yield None
             return
         manager = manager_cls.create(self.cfg)
-        with manager.mounted():
+        manager.mount()
+        try:
             yield manager.path
+        finally:
+            self.unmount_manager(manager)
 
     # -- snapshots ------------------------------------------------------
     def list_snapshots(self):
@@ -485,11 +614,37 @@ class Backend:
 
     # -- long operations (call from worker thread) ----------------------
     def take_snapshot(self):
-        """Run a backup. Returns error string or None."""
+        """Run a backup. Returns error string or None.
+
+        ``Snapshots.backup()`` owns its mount lifecycle. Keeping an outer
+        persistent mount double-mounts encrypted destinations. The core also
+        calls the legacy ``fusermount`` binary, absent on FUSE3-only systems.
+        """
+        before = [sid.path() for sid in self.list_snapshots()]
+        if self.profile_mode() != 'local':
+            self.release_mount()
         sn = snapshots.Snapshots(self.cfg)
-        with self.mounted():
+        try:
             ret_error = sn.backup(force=True)
             msg = sn.takeSnapshotMessage()
+        except FileNotFoundError as exc:
+            if 'fusermount' not in str(exc):
+                self._snapshots = None
+                return str(exc)
+            manager = getattr(sn, 'mount_manager', None)
+            if manager is not None:
+                try:
+                    self.unmount_manager(manager)
+                except Exception as unmount_error:  # noqa: BLE001
+                    logger.debug(f'Backup unmount fallback: {unmount_error}')
+            self._snapshots = None
+            after = [sid.path() for sid in self.list_snapshots()]
+            if after and (not before or after[0] != before[0]):
+                return None
+            return str(exc)
+        except Exception as exc:          # noqa: BLE001
+            self._snapshots = None
+            return str(exc)
         return None if not ret_error else (msg[1] if msg else 'Error desconocido')
 
     @staticmethod
