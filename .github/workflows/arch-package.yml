@@ -1,0 +1,52 @@
+name: Arch package
+
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+    paths:
+      - 'packaging/aur/PKGBUILD'
+      - 'packaging/aur/.SRCINFO'
+      - '.github/workflows/arch-package.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+
+    steps:
+      - name: Install Git and packaging tools
+        run: pacman -Sy --noconfirm --needed base-devel git python
+
+      # A Git checkout is required: the REST source archive respects
+      # export-ignore and therefore omits the packaging/ directory.
+      - uses: actions/checkout@v7
+
+      - name: Prepare an unprivileged package builder
+        run: |
+          useradd --create-home builder
+          chown --recursive builder:builder "$GITHUB_WORKSPACE"
+
+      - name: Check that the tag matches pkgver
+        if: github.ref_type == 'tag'
+        run: |
+          cd packaging/aur
+          source PKGBUILD
+          expected="${GITHUB_REF_NAME#v}"
+          if [[ "$pkgver" != "$expected" ]]; then
+            printf 'Tag version %s does not match PKGBUILD pkgver %s\n' \
+              "$expected" "$pkgver" >&2
+            exit 1
+          fi
+
+      - name: Check that .SRCINFO is current
+        run: |
+          cd packaging/aur
+          runuser -u builder -- makepkg --printsrcinfo > /tmp/.SRCINFO
+          diff -u .SRCINFO /tmp/.SRCINFO
+
+      - name: Verify sources and build the package
+        run: |
+          cd packaging/aur
+          runuser -u builder -- makepkg --nodeps --noconfirm
