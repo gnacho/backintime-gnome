@@ -171,6 +171,7 @@ class Backend:
         self.last_automation_error = None
         self._snapshots = None        # cached: Snapshots() costs ~260 ms
         self._mount_manager = None    # persistent mount for the app lifetime
+        self.destination_problem = None   # user facing text when unreachable
         if not available():
             self.error = _IMPORT_ERROR
             return
@@ -598,12 +599,13 @@ class Backend:
     def ensure_mounted(self):
         """Mount the destination once and keep it for the app lifetime.
 
-        Returns ``(ok, error)``. A plain local profile needs no mount; 1.6.x
-        has no mount manager at all.
+        Returns ``(ok, error)`` with the error ready to show: the core's
+        MountError carries a ``gui_msg`` written for the user. A local
+        profile needs no mount, but the destination still has to exist,
+        otherwise the window claims "no copies yet" over a disk that is
+        simply unplugged.
         """
         if self.cfg is None:
-            return True, None
-        if str(self.profile_mode()) == 'local':
             return True, None
         manager_cls = getattr(mount, 'MountManager', None) if mount else None
         if manager_cls is None:
@@ -611,10 +613,16 @@ class Backend:
         if self._mount_manager is not None:
             return True, None
         try:
+            if str(self.profile_mode()) == 'local':
+                manager_cls.create(self.cfg).validate()
+                self.destination_problem = None
+                return True, None
             manager = manager_cls.create(self.cfg)
             manager.mount()
         except Exception as exc:          # noqa: BLE001
-            return False, str(exc)
+            self.destination_problem = self._mount_error_text(exc)
+            return False, self.destination_problem
+        self.destination_problem = None
         self._mount_manager = manager
         return True, None
 
@@ -718,7 +726,7 @@ class Backend:
         except FileNotFoundError as exc:
             if 'fusermount' not in str(exc):
                 self._snapshots = None
-                return str(exc)
+                return self._mount_error_text(exc)
             manager = getattr(sn, 'mount_manager', None)
             if manager is not None:
                 try:
@@ -729,11 +737,24 @@ class Backend:
             after = [sid.path() for sid in self.list_snapshots()]
             if after and (not before or after[0] != before[0]):
                 return None
-            return str(exc)
+            return self._mount_error_text(exc)
         except Exception as exc:          # noqa: BLE001
             self._snapshots = None
-            return str(exc)
-        return None if not ret_error else (msg[1] if msg else 'Error desconocido')
+            return self._mount_error_text(exc)
+        finally:
+            # The core owns the mount during a backup and unmounts at the
+            # end, so the persistent mount has to be restored or every
+            # snapshot path the window holds points at a dead mountpoint.
+            if self.profile_mode() != 'local':
+                ok, error = self.ensure_mounted()
+                if not ok:
+                    logger.debug(f'Could not remount after the copy: {error}')
+        if not ret_error:
+            return None
+        if msg and len(msg) > 1 and msg[1]:
+            return msg[1]
+        tail = list(self.snapshot_log())[-1:]
+        return tail[0].strip() if tail else 'La copia falló sin mensaje del motor'
 
     @staticmethod
     def descendant_pids(root=None):
@@ -802,13 +823,24 @@ class Backend:
                        backup=backup, only_new=only_new)
 
     def snapshot_log(self):
-        """Yield log lines for the current profile."""
-        log = snapshotlog.SnapshotLog(self.cfg)
+        """Yield log lines for the current profile.
+
+        The log lives under the local data directory, so it needs no mount.
+        Wrapping it in ``mounted()`` left it empty exactly when it mattered:
+        the copy failed because the destination was unreachable.
+        """
         try:
-            with self.mounted():
-                yield from log.get()
-        except Exception:                 # noqa: BLE001
+            log = snapshotlog.SnapshotLog(self.cfg)
+            yield from log.get()
+        except Exception as exc:          # noqa: BLE001
+            logger.debug(f'Could not read the snapshot log: {exc}')
             return
+
+    @staticmethod
+    def _mount_error_text(exc):
+        """The core writes user facing messages in MountError.gui_msg."""
+        text = getattr(exc, 'gui_msg', None) or str(exc)
+        return text.strip() or exc.__class__.__name__
 
     def free_space(self):
         try:

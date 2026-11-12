@@ -971,7 +971,15 @@ class MainWindow(Adw.ApplicationWindow):
         failed_count = sum(1 for sid in self.chrono
                            if getattr(sid, 'failed', False))
 
-        if count == 0:
+        problem = getattr(self.backend, 'destination_problem', None)
+        if problem:
+            # An unreachable destination is not "no copies yet": saying that
+            # over a disk with years of snapshots on it is a lie.
+            self.hero_title.set_text('No se puede leer el destino')
+            self.hero_sub.set_text(problem.splitlines()[0])
+            self.ring_check.set_from_icon_name('dialog-warning-symbolic')
+            self.ring_state = 'warn'
+        elif count == 0:
             self.hero_title.set_text('Sin copias todavía')
             self.hero_sub.set_text(
                 'Crea la primera copia para empezar a viajar en el tiempo.')
@@ -1001,7 +1009,8 @@ class MainWindow(Adw.ApplicationWindow):
             dest = self.backend.destination_path()
             if dest:
                 name = os.path.basename(dest.rstrip('/')) or dest
-                self.meta_dest.set_markup(f'Destino · <b>{name}</b>')
+                self.meta_dest.set_markup(
+                    f'Destino · <b>{GLib.markup_escape_text(name)}</b>')
             else:
                 self.meta_dest.set_text('Destino · sin configurar')
         self.meta_ret.set_markup(self._retention_text())
