@@ -401,7 +401,10 @@ class FirstRunWizard(Adw.Window):
 
     def _go(self, step):
         if step >= 5:
-            if not self._apply():
+            if self._apply() is not True:
+                return
+            if self.encrypt:
+                # The encrypted setup runs in a worker and advances by itself
                 return
         self.step = step
         self._render()
@@ -425,6 +428,13 @@ class FirstRunWizard(Adw.Window):
             if password != self.password_confirm.get_text():
                 self._toast('Las contraseñas no coinciden')
                 return False
+        if self.encrypt:
+            # gocryptfs -init plus a FUSE mount measured at 1.7 s: on the main
+            # loop it froze the wizard with a modal dialog open.
+            self._apply_password = self.password_entry.get_text()
+            self._toast('Preparando el cifrado…')
+            Worker(self._apply_encrypted, self._apply_done)
+            return True
         try:
             entries, seen = [], set()
             for item in self.preserved + [(p, 0) for p in sorted(self.folders)]:
@@ -439,24 +449,50 @@ class FirstRunWizard(Adw.Window):
             units = getattr(_backend.bitbase_module, 'TimeUnit', None)
             if units is not None:
                 self.cfg.setRemoveOldSnapshots(True, 2, units.YEAR)
-            if self.encrypt:
-                self.backend.setup_local_gocryptfs(
-                    self.destination, self.password_entry.get_text(),
-                    save_in_keyring=bool(getattr(
-                        _backend.tools, 'KEYRING_SUPPORTED', False)),
-                    use_ram_cache=True)
-            else:
-                if self._destination_editable() and self.destination:
-                    self.backend.set_destination_path(self.destination)
-                if not ui.save(self.cfg):
-                    self._toast('No se pudo guardar la configuración')
-                    return False
+            if self._destination_editable() and self.destination:
+                self.backend.set_destination_path(self.destination)
+            if not ui.save(self.cfg):
+                self._toast('No se pudo guardar la configuración')
+                return False
             self._applied = True
         except Exception as exc:  # noqa: BLE001
             self._toast(f'No se pudo guardar: {exc}')
             return False
         Worker(self.backend.apply_automation, lambda *_: None)
         return True
+
+    def _apply_encrypted(self):
+        """Slow half of the apply: config writes plus gocryptfs setup."""
+        entries, seen = [], set()
+        for item in self.preserved + [(p, 0) for p in sorted(self.folders)]:
+            if item in seen:
+                continue
+            seen.add(item)
+            entries.append(item)
+        self.cfg.setInclude(entries)
+        const = SCHEDULE_CONST.get(self.frequency, 'DISABLED')
+        mode = getattr(self.cfg, const, self.cfg.NONE)
+        self.cfg.setScheduleMode(mode)
+        units = getattr(_backend.bitbase_module, 'TimeUnit', None)
+        if units is not None:
+            self.cfg.setRemoveOldSnapshots(True, 2, units.YEAR)
+        self.backend.setup_local_gocryptfs(
+            self.destination, self._apply_password,
+            save_in_keyring=bool(getattr(
+                _backend.tools, 'KEYRING_SUPPORTED', False)),
+            use_ram_cache=True)
+        return True
+
+    def _apply_done(self, result, error):
+        if error or not result:
+            self._toast(f'No se pudo preparar el cifrado: '
+                        f'{error or "sin detalle"}')
+            return False
+        self._applied = True
+        Worker(self.backend.apply_automation, lambda *_: None)
+        self.step = 5
+        self._render()
+        return False
 
     def _step_progress(self):
         self._title('Trabajando', 'Primera copia en marcha',

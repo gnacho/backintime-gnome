@@ -10,7 +10,18 @@ from bitgnome.prefs import PreferencesWindow, _MODES
 from bitgnome.settings_sheet import SettingsSheet
 from bitgnome.wizard import FirstRunWizard
 
+from unittest import mock
+
 from helpers import TestApp, find_widget_by_label, isolated_home, widget_texts
+
+
+def inline_worker(fn, done):
+    """Run the wizard's worker synchronously so the test can assert after."""
+    try:
+        result, error = fn(), None
+    except Exception as exc:  # noqa: BLE001
+        result, error = None, exc
+    done(result, error)
 
 
 class EncryptionUiTests(unittest.TestCase):
@@ -72,7 +83,8 @@ class EncryptionUiTests(unittest.TestCase):
 
         self.app.backend.setup_local_gocryptfs = setup
         self.app.backend.apply_automation = lambda: True
-        self.assertTrue(self.wizard._apply())
+        with mock.patch('bitgnome.wizard.Worker', inline_worker):
+            self.assertTrue(self.wizard._apply())
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0][0], self.wizard.destination)
         self.assertEqual(calls[0][1], 'same-secret')
@@ -87,7 +99,9 @@ class EncryptionUiTests(unittest.TestCase):
         self.wizard.password_confirm.set_text('same-secret')
         self.app.backend.list_snapshots = lambda: [object()]
         original = self.app.backend.profile_mode()
-        self.assertFalse(self.wizard._apply())
+        with mock.patch('bitgnome.wizard.Worker', inline_worker):
+            self.wizard._apply()
+        self.assertFalse(self.wizard._applied)
         self.assertEqual(self.app.backend.profile_mode(), original)
         self.assertIn('perfil nuevo',
                       ' '.join(widget_texts(self.wizard.card)).lower())

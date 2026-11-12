@@ -1576,12 +1576,16 @@ class MainWindow(Adw.ApplicationWindow):
         if not sids or self.cfg is None:
             self.toast('Todavía no hay instantáneas')
             return
+        self._retention_token += 1
+        token = self._retention_token
 
         def work():
             from bitgnome import retention
             return retention.audit(self.cfg, sids)
 
         def done(result, error):
+            if token != self._retention_token:
+                return False
             if error or result is None:
                 self.toast('No hay instantáneas fuera de retención')
                 return False
@@ -1678,10 +1682,14 @@ class MainWindow(Adw.ApplicationWindow):
             dialog.close()
             self.toast('La copia sigue en segundo plano. Te aviso al terminar')
 
+        state.setdefault('closing', False)
         stop_btn.connect('clicked', stop_clicked)
         background_btn.connect('clicked', to_background)
         def on_close(*_):
-            # closing the window keeps the copy running, like the button
+            # closing the window keeps the copy running, like the button.
+            # A programmatic close (the copy finished) must not say that.
+            if state.get('closing'):
+                return False
             if not state['background']:
                 state['background'] = True
                 self.toast('La copia sigue en segundo plano. Te aviso al terminar')
@@ -1714,6 +1722,7 @@ class MainWindow(Adw.ApplicationWindow):
                 self._snap_poll_source = None
             self.snap_btn.set_sensitive(True)
             self.snap_btn.set_label('Crear copia ahora')
+            state['closing'] = True
             dialog.close()
             if self._close_dialog is not None:
                 self._close_dialog.destroy()
