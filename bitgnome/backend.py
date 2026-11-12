@@ -438,8 +438,90 @@ class Backend:
             if not self._cron_installed():
                 self.last_automation_error = 'crontab not updated'
                 return False
+            if self._cron_service_state() == 'inactive':
+                # The entry is written, so enabling the daemon later is
+                # enough. Reported as a warning, not as a write failure.
+                self.last_automation_error = 'cron service not running'
+                return True
             self.last_automation_error = None
             return True
+
+    def _cron_service_state(self, binary=None):
+        """State of the cron daemon: active, inactive or unknown.
+
+        A package installed is not a daemon running. On Arch nothing enables
+        ``cronie.service`` on install, so a crontab entry can be written and
+        never executed. Units of the usual implementations are checked and
+        an absent unit is reported as inactive only when no implementation
+        is installed at all, which is the caller's business.
+        """
+        if self.cfg is None or not self._needs_cron():
+            return 'unknown'
+        systemctl = shutil.which('systemctl')
+        if systemctl is None:
+            return 'unknown'
+        binary = binary or self._cron_binary()
+        if binary and os.path.basename(binary) == 'fcrontab':
+            units = ('fcron.service',)
+        else:
+            units = ('cronie.service', 'crond.service', 'fcron.service')
+        for unit in units:
+            try:
+                out = subprocess.run(
+                    [systemctl, 'show', '--property=LoadState',
+                     '--property=ActiveState', unit],
+                    capture_output=True, text=True, timeout=5)
+            except Exception:                 # noqa: BLE001
+                continue
+            values = {}
+            for line in out.stdout.splitlines():
+                key, _, value = line.partition('=')
+                values[key.strip()] = value.strip()
+            if values.get('LoadState') != 'loaded':
+                continue
+            return 'active' if values.get('ActiveState') == 'active' \
+                else 'inactive'
+        return 'inactive'
+
+    def _needs_cron(self):
+        """Whether the current schedule mode relies on cron."""
+        try:
+            mode = getattr(self.cfg.scheduleMode(), 'name', '')
+        except Exception:                     # noqa: BLE001
+            return False
+        return mode not in ('DISABLED', 'UDEV', 'AT_EVERY_BOOT')
+
+    @staticmethod
+    def _cron_binary():
+        return shutil.which('crontab') or shutil.which('fcrontab')
+
+    def cron_status(self):
+        """Report whether the configured schedule can actually run.
+
+        Returns a dict with the schedule mode, the crontab binary, the state
+        of the cron service and a ``problem`` key: ``None`` when nothing is
+        wrong, ``'binary'`` when no implementation is installed and
+        ``'service'`` when one is installed but its daemon is not running.
+        """
+        status = {'mode': '', 'needs_cron': False, 'binary': None,
+                  'service': 'unknown', 'problem': None}
+        if self.cfg is None:
+            return status
+        try:
+            status['mode'] = getattr(self.cfg.scheduleMode(), 'name', '')
+        except Exception:                     # noqa: BLE001
+            status['mode'] = ''
+        status['needs_cron'] = self._needs_cron()
+        if not status['needs_cron']:
+            return status
+        status['binary'] = self._cron_binary()
+        if status['binary'] is None:
+            status['problem'] = 'binary'
+            return status
+        status['service'] = self._cron_service_state(status['binary'])
+        if status['service'] == 'inactive':
+            status['problem'] = 'service'
+        return status
 
     def _cron_installed(self):
         """The core swallows crontab write errors; check the result."""

@@ -54,6 +54,7 @@ class SettingsSheet(Adw.Window):
         self.backend = app.backend
         self.cfg = app.backend.cfg
         self.on_change = on_change
+        self.schedule_status = None
 
         root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         root.add_css_class('rw-sheet')
@@ -185,6 +186,11 @@ class SettingsSheet(Adw.Window):
             subtitle = f'Ahora: {MODE_LABELS.get(mode_name, mode_name)}'
         self.body.append(ui.row('Frecuencia', subtitle, control))
 
+        self.schedule_status = ui.row('Estado', 'Comprobando el servicio de '
+                                      'cron…', None)
+        self.body.append(self.schedule_status)
+        self._refresh_schedule_status()
+
         switch = Gtk.Switch(active=self._get(self.cfg.notify, True),
                             valign=Gtk.Align.CENTER)
         switch.connect('notify::active', lambda sw, _: (
@@ -204,9 +210,32 @@ class SettingsSheet(Adw.Window):
         try:
             self.cfg.setScheduleMode(mode)
             self._save()
-            _backend.Worker(self.backend.apply_automation, lambda *_: None)
+            _backend.Worker(self.backend.apply_automation,
+                            lambda *_: self._refresh_schedule_status())
         except Exception:  # noqa: BLE001
             pass
+
+    def _refresh_schedule_status(self):
+        """Say plainly whether the chosen schedule will run."""
+        def done(status, error):
+            if self.schedule_status is None or self.schedule_status.subtitle \
+                    is None:
+                return False
+            status = status if isinstance(status, dict) else {}
+            if not status.get('needs_cron'):
+                text = 'No depende de cron'
+            elif status.get('problem') == 'binary':
+                text = 'No hay cron instalado: no se ejecutará'
+            elif status.get('problem') == 'service':
+                text = 'Cron instalado pero su servicio está parado'
+            elif error:
+                text = f'No se pudo comprobar: {error}'
+            else:
+                text = 'Listo: cron está activo'
+            self.schedule_status.subtitle.set_text(text)
+            return False
+
+        _backend.Worker(self.backend.cron_status, done)
 
     # ---------------------------------------------------------- destination
     def _build_destination(self):

@@ -5,6 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CHECKS = [
+    [sys.executable, 'tests/test_cron_status.py'],
     [sys.executable, 'tests/test_encryption_ui.py'],
     [sys.executable, 'tests/test_encryption_integration.py'],
     [sys.executable, '-m', 'compileall', '-q', 'bitgnome'],
