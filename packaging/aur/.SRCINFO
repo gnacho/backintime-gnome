@@ -13,6 +13,6 @@ pkgbase = backintime-gnome
 	optdepends = cronie: cron-based automatic backups
 	optdepends = gocryptfs: encrypted profiles with Back In Time 2.0
 	source = backintime-gnome-0.3.5.tar.gz::https://github.com/gnacho/backintime-gnome/archive/9144e1b207309958b625de4b7dd410cac9f7dab2.tar.gz
-	sha256sums = ce23afb6cf30f37130a4abfde1e674acad43629c02de0d5ed44b9caa272c1b55
+	sha256sums = e26c82224cdd499ad02c21139d7bbef8da1d6aafc85947e54bbbd4c92c8c6937
 
 pkgname = backintime-gnome

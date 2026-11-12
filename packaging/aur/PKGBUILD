@@ -13,7 +13,7 @@ optdepends=('backintime: udev-based schedules with Back In Time 1.6.x'
             'gocryptfs: encrypted profiles with Back In Time 2.0')
 depends=(backintime-cli gtk4 libadwaita python-gobject)
 source=("$pkgname-$pkgver.tar.gz::$url/archive/$_commit.tar.gz")
-sha256sums=('ce23afb6cf30f37130a4abfde1e674acad43629c02de0d5ed44b9caa272c1b55')
+sha256sums=('e26c82224cdd499ad02c21139d7bbef8da1d6aafc85947e54bbbd4c92c8c6937')
 
 package() {
   cd "$pkgname-$_commit"
