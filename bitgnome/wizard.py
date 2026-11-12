@@ -364,6 +364,17 @@ class FirstRunWizard(Adw.Window):
     def _nav(self):
         nav = Gtk.Box(spacing=10)
         nav.set_margin_top(6)
+
+        # Leaving is always possible: the window manager close button already
+        # works on every page, and this makes it visible and consistent.
+        # Nothing is written until _apply(), so dismissing saves nothing.
+        skip = Gtk.Button(label='Ahora no')
+        skip.add_css_class('rw-soft')
+        skip.set_tooltip_text('Salir sin configurar nada')
+        ui.a11y(skip, 'Salir sin configurar nada')
+        skip.connect('clicked', lambda *_: self.close())
+        nav.append(skip)
+
         back = Gtk.Button(label='Atrás')
         back.add_css_class('rw-soft')
         back.set_visible(self.step > 0)
@@ -386,11 +397,6 @@ class FirstRunWizard(Adw.Window):
         next_btn.connect('clicked', lambda *_: self._go(self.step + 1))
         nav.append(next_btn)
 
-        if self.step == 0:
-            skip = Gtk.Button(label='Ahora no')
-            skip.add_css_class('rw-soft')
-            skip.connect('clicked', lambda *_: self.close())
-            nav.prepend(skip)
         self.card.append(nav)
 
     def _go(self, step):

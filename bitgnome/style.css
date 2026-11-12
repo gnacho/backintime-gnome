@@ -759,3 +759,15 @@ window.time .rw-cron-icon {
 window.time .rw-cron-text {
   color: #fde68a;
 }
+
+/* Wizard soft buttons sit on the dark card: the lilac of the light theme
+ * only reaches 3.46:1 there, so the escape route is repainted. */
+.rw-wizard button.rw-soft {
+  background-color: rgba(255, 255, 255, 0.10);
+  color: #d8ccf7;
+}
+
+.rw-wizard button.rw-soft:hover {
+  background-color: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
