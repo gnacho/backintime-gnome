@@ -25,7 +25,10 @@ class TestApp:
 
 def isolated_home(test):
     """Create a temporary HOME and restore it during test cleanup."""
-    home = tempfile.TemporaryDirectory(prefix='rewind-encryption-home-')
+    # A worker thread may still be writing into HOME when the test
+    # ends: the cleanup must not turn that into a test failure.
+    home = tempfile.TemporaryDirectory(
+        prefix='rewind-encryption-home-', ignore_cleanup_errors=True)
     old_home = os.environ.get('HOME')
     old_config = os.environ.get('XDG_CONFIG_HOME')
     old_data = os.environ.get('XDG_DATA_HOME')

@@ -679,6 +679,26 @@ class MainWindow(Adw.ApplicationWindow):
         else:
             self.remove_css_class('rw-dark')
 
+    def busy_reason(self):
+        """Why a reload cannot happen right now, or None.
+
+        The settings sheet needs this before it writes anything: mutating the
+        profile first and asking later left the engine on one profile and the
+        window listing another.
+        """
+        if self._snap_worker_running or self.backend.busy_backup \
+                or self._busy_ops:
+            return 'Espera a que termine la operación en curso'
+        return None
+
+    def _busy_guard(self, what):
+        """True when another operation is running, with a toast for it."""
+        reason = self.busy_reason()
+        if reason:
+            self.toast(f'{reason} para {what}')
+            return True
+        return False
+
     def _on_settings_changed(self, reload=False, retention=False):
         self._refresh_cron()
         if retention:
@@ -689,8 +709,7 @@ class MainWindow(Adw.ApplicationWindow):
             self._update_hero()
             self.render_files()
             return
-        if self._snap_worker_running or self.backend.busy_backup \
-                or self._busy_ops:
+        if self.busy_reason():
             self.toast('Espera a que termine la operación para cambiar de '
                        'perfil o destino')
             return
@@ -1540,6 +1559,8 @@ class MainWindow(Adw.ApplicationWindow):
         if self._snap_worker_running or self.backend.busy_backup:
             self.toast('Ya hay una instantánea en curso')
             return
+        if self._busy_guard('crear una copia'):
+            return
         if self.backend.error:
             self.toast('Núcleo no disponible')
             return
@@ -1825,6 +1846,8 @@ class MainWindow(Adw.ApplicationWindow):
         return False
 
     def restore_selection(self, other_location=False):
+        if self._busy_guard('restaurar'):
+            return
         sid = self._current_sid()
         if sid is None:
             self.toast('Viaja a un punto en el tiempo para restaurar')
@@ -1925,6 +1948,8 @@ class MainWindow(Adw.ApplicationWindow):
             pass
 
     def delete_current_snapshot(self):
+        if self._busy_guard('borrar una instantánea'):
+            return
         sid = self._current_sid()
         if sid is None:
             self.toast('Elige un punto en el tiempo primero')

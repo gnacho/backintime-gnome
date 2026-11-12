@@ -103,6 +103,22 @@ class SettingsSheet(Adw.Window):
         self.body.append(self._error_label)
 
     # ---------------------------------------------------------------- save
+    def _parent_busy(self):
+        """Refuse before writing anything, not after.
+
+        The window cannot reload while an operation runs, so changing the
+        profile first left the engine on one profile and the list on another.
+        """
+        parent = self.get_transient_for()
+        check = getattr(parent, 'busy_reason', None)
+        if check is None:
+            return False
+        reason = check()
+        if reason:
+            self._show_error(reason + ': no se ha cambiado nada')
+            return True
+        return False
+
     def _show_error(self, message):
         if self._error_label is not None:
             self._error_label.set_text(message)
@@ -293,8 +309,7 @@ class SettingsSheet(Adw.Window):
             self.on_change(reload=True)
 
     def _change_destination(self, _btn):
-        if self.backend.busy_backup:
-            self._show_error('Hay una copia en curso: espera a que termine')
+        if self._parent_busy():
             return
 
         def on_path(path):
@@ -574,8 +589,7 @@ class SettingsSheet(Adw.Window):
         return expander
 
     def _on_profile_chosen(self, _btn, pid):
-        if self.backend.busy_backup:
-            self._show_error('Hay una copia en curso: espera a que termine')
+        if self._parent_busy():
             return
         try:
             self.backend.set_current_profile(pid)
