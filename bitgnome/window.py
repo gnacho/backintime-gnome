@@ -129,6 +129,9 @@ class MainWindow(Adw.ApplicationWindow):
         self._build_ui()
         self._build_shortcuts()
         self.connect('close-request', self._on_close_request)
+        self._sync_theme()
+        Adw.StyleManager.get_default().connect('notify::dark',
+                                               self._sync_theme)
 
         if self.backend.error:
             self._show_backend_error(self.backend.error)
@@ -250,12 +253,13 @@ class MainWindow(Adw.ApplicationWindow):
         section.append('Revisar retención', 'app.retention')
         menu.append_section(None, section)
         section2 = Gio.Menu()
+        section2.append('Asistente de configuración', 'app.first-run')
         section2.append('Gestionar perfiles', 'app.advanced-preferences')
         section2.append('Atajos de teclado', 'app.shortcuts')
-        section2.append('Tema claro/oscuro', 'app.toggle-theme')
         section2.append('Acerca de Back In Time', 'app.about')
         menu.append_section(None, section2)
 
+        self.menu = menu
         menu_btn = Gtk.MenuButton(icon_name='open-menu-symbolic',
                                   menu_model=menu)
         menu_btn.add_css_class('rw-ghost')
@@ -626,11 +630,17 @@ class MainWindow(Adw.ApplicationWindow):
         self._settings_sheet = sheet
         sheet.present()
 
-    def _toggle_dark(self, *_):
-        manager = Adw.StyleManager.get_default()
-        manager.set_color_scheme(
-            Adw.ColorScheme.DEFAULT if manager.get_dark()
-            else Adw.ColorScheme.FORCE_DARK)
+    def _sync_theme(self, *_):
+        """Repaint for the system theme; time mode keeps its own palette.
+
+        The stylesheet is written for a light desktop, so the dark surfaces
+        are a second block switched by a class. Nothing is forced: the app
+        follows ``Adw.StyleManager``, which tracks the desktop setting.
+        """
+        if Adw.StyleManager.get_default().get_dark():
+            self.add_css_class('rw-dark')
+        else:
+            self.remove_css_class('rw-dark')
 
     def _on_settings_changed(self, reload=False, retention=False):
         self._refresh_cron()

@@ -22,7 +22,6 @@ class BackInTimeApp(Adw.Application):
         self._add_action('advanced-preferences', self._advanced_preferences)
         self._add_action('about', self._about)
         self._add_action('shortcuts', self._shortcuts)
-        self._add_action('toggle-theme', lambda *_: self._win('_toggle_dark'))
         self._add_action('first-run', lambda *_: self._win('open_wizard'))
         self._add_action('delete-snapshot',
                          lambda *_: self._win('delete_current_snapshot'))
@@ -44,6 +43,11 @@ class BackInTimeApp(Adw.Application):
 
     def _win(self, method, *args):
         win = self.get_active_window()
+        if win is None:
+            # Without focus get_active_window() is None and menu actions
+            # would silently do nothing.
+            windows = self.get_windows()
+            win = windows[0] if windows else None
         if win:
             getattr(win, method)(*args)
 

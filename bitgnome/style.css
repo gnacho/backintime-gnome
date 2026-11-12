@@ -385,6 +385,247 @@ button.rw-soft:hover {
   padding: 0 10px;
 }
 
+/* ------------------------------------------- system dark theme (auto) */
+/* The palette above is written for a light desktop. When the desktop is
+ * dark the same surfaces are repainted here, with the violet accent kept.
+ * Time mode keeps its twilight palette below and wins in that mode because
+ * it comes later in the file. */
+window.rw-dark {
+  background-color: #160d2c;
+}
+
+window.rw-dark .rw-root {
+  background-color: #160d2c;
+  color: #f2eefc;
+}
+
+window.rw-dark headerbar.rw-header {
+  background-color: rgba(22, 13, 44, 0.92);
+  border-bottom-color: rgba(255, 255, 255, 0.13);
+  color: #f2eefc;
+}
+
+window.rw-dark headerbar.rw-header button.titlebutton,
+window.rw-dark headerbar.rw-header windowcontrols button {
+  color: #f2eefc;
+}
+
+window.rw-dark .rw-title,
+window.rw-dark .rw-hbig,
+window.rw-dark .rw-date,
+window.rw-dark .rw-section-title,
+window.rw-dark .rw-tl-label,
+window.rw-dark .rw-row-name,
+window.rw-dark .rw-tile-name,
+window.rw-dark .rw-empty-title,
+window.rw-dark .rw-sheet-title,
+window.rw-dark .rw-srow-title {
+  color: #f2eefc;
+}
+
+window.rw-dark .rw-subtitle,
+window.rw-dark .rw-hint,
+window.rw-dark .rw-hsub,
+window.rw-dark .rw-meta,
+window.rw-dark .rw-tl-sub,
+window.rw-dark .rw-date-rel,
+window.rw-dark .rw-tile-size,
+window.rw-dark .rw-row-dim,
+window.rw-dark .rw-empty,
+window.rw-dark .rw-srow-sub,
+window.rw-dark .rw-group-title {
+  color: rgba(242, 238, 252, 0.60);
+}
+
+window.rw-dark .rw-meta b {
+  color: #f2eefc;
+}
+
+window.rw-dark entry.rw-search,
+window.rw-dark entry.rw-entry {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.13);
+  color: #f2eefc;
+}
+
+window.rw-dark .rw-ghost {
+  color: rgba(242, 238, 252, 0.70);
+}
+
+window.rw-dark .rw-ghost:hover {
+  background-color: rgba(124, 100, 227, 0.22);
+  color: #b9a9f7;
+}
+
+window.rw-dark button.rw-primary {
+  background-color: #7c64e3;
+  color: #ffffff;
+}
+
+window.rw-dark button.rw-primary:hover {
+  background-color: #8d78ea;
+}
+
+window.rw-dark .rw-hero {
+  background-image: linear-gradient(135deg, rgba(124, 100, 227, 0.16), rgba(124, 100, 227, 0));
+  background-color: rgba(22, 13, 44, 0.78);
+  border-color: rgba(255, 255, 255, 0.13);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.30);
+}
+
+window.rw-dark .rw-seg {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+window.rw-dark .rw-seg button {
+  color: rgba(242, 238, 252, 0.60);
+}
+
+window.rw-dark .rw-seg button:checked {
+  background-color: rgba(255, 255, 255, 0.16);
+  color: #f2eefc;
+}
+
+window.rw-dark .rw-crumb {
+  color: rgba(242, 238, 252, 0.60);
+}
+
+window.rw-dark .rw-crumb-sep {
+  color: rgba(242, 238, 252, 0.45);
+}
+
+window.rw-dark .rw-crumb:hover {
+  background-color: rgba(124, 100, 227, 0.20);
+  color: #b9a9f7;
+}
+
+window.rw-dark .rw-crumb.current {
+  background-color: #7c64e3;
+  color: #ffffff;
+}
+
+window.rw-dark .rw-tile {
+  background-color: rgba(22, 13, 44, 0.78);
+  border-color: rgba(255, 255, 255, 0.13);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+window.rw-dark .rw-tile:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.40);
+}
+
+window.rw-dark flowbox.rw-grid flowboxchild:selected .rw-tile,
+window.rw-dark .rw-tile.selected {
+  border-color: #7c64e3;
+  background-color: rgba(124, 100, 227, 0.18);
+}
+
+window.rw-dark .rw-date-rel b {
+  color: #b9a9f7;
+}
+
+window.rw-dark list.rw-list row {
+  background-color: rgba(22, 13, 44, 0.78);
+  border-color: rgba(255, 255, 255, 0.13);
+}
+
+window.rw-dark list.rw-list row:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+window.rw-dark list.rw-list row:selected {
+  background-color: rgba(124, 100, 227, 0.18);
+  border-color: #7c64e3;
+}
+
+window.rw-dark .rw-timeline {
+  background-color: rgba(20, 12, 40, 0.86);
+  border-top-color: rgba(255, 255, 255, 0.13);
+}
+
+window.rw-dark .rw-play {
+  background-color: rgba(124, 100, 227, 0.20);
+  color: #b9a9f7;
+}
+
+window.rw-dark .rw-play:hover {
+  background-color: #7c64e3;
+  color: #ffffff;
+}
+
+window.rw-dark button.rw-soft {
+  background-color: rgba(124, 100, 227, 0.20);
+  color: #c3b6f5;
+}
+
+window.rw-dark button.rw-soft:hover {
+  background-color: #7c64e3;
+  color: #ffffff;
+}
+
+window.rw-dark .rw-actionbar {
+  background-color: #1d1332;
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+}
+
+window.rw-dark .rw-actionbar-name {
+  color: #f2eefc;
+}
+
+window.rw-dark .rw-badge-new {
+  background-color: rgba(45, 212, 191, 0.16);
+  color: #2dd4bf;
+}
+
+window.rw-dark .rw-badge-changed {
+  background-color: rgba(251, 191, 36, 0.16);
+  color: #fbbf24;
+}
+
+window.rw-dark .rw-badge-gone {
+  background-color: rgba(251, 113, 133, 0.14);
+  color: #fb7185;
+}
+
+window.rw-dark .rw-cron-banner {
+  background-color: rgba(146, 64, 14, 0.30);
+  border-bottom-color: rgba(254, 243, 199, 0.24);
+}
+
+window.rw-dark .rw-cron-icon {
+  color: #fcd34d;
+}
+
+window.rw-dark .rw-cron-text {
+  color: #fde68a;
+}
+
+window.rw-dark .rw-sheet {
+  background-color: #160d2c;
+  color: #f2eefc;
+}
+
+window.rw-dark .rw-sheet-head,
+window.rw-dark .rw-srow {
+  border-bottom-color: rgba(255, 255, 255, 0.10);
+}
+
+window.rw-dark .rw-chip {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.13);
+}
+
+window.rw-dark .rw-chip-close {
+  color: rgba(242, 238, 252, 0.60);
+}
+
+window.rw-dark button.rw-danger {
+  background-color: rgba(248, 113, 113, 0.16);
+  color: #fb7185;
+}
+
 /* ----------------------------------------------------------- time mode */
 window.time {
   background-color: #160d2c;
