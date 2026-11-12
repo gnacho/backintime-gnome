@@ -60,7 +60,13 @@ class BackInTimeApp(Adw.Application):
 
     def do_activate(self):
         from bitgnome.window import MainWindow
-        win = self.get_active_window() or MainWindow(self)
+        # get_active_window() is None without focus, and a second launch
+        # (another `rewind`, or `rewind --first-run`) used to create a second
+        # main window instead of presenting the one already open.
+        win = self.get_active_window()
+        if win is None:
+            windows = self.get_windows()
+            win = windows[0] if windows else MainWindow(self)
         win.present()
 
     def do_command_line(self, command_line):
