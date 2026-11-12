@@ -16,11 +16,15 @@ jobs:
     container: archlinux:latest
 
     steps:
+      - name: Install Git and packaging tools
+        run: pacman -Sy --noconfirm --needed base-devel git python
+
+      # A Git checkout is required: the REST source archive respects
+      # export-ignore and therefore omits the packaging/ directory.
       - uses: actions/checkout@v4
 
-      - name: Install packaging tools
+      - name: Prepare an unprivileged package builder
         run: |
-          pacman -Sy --noconfirm --needed base-devel python
           useradd --create-home builder
           chown --recursive builder:builder "$GITHUB_WORKSPACE"
 
