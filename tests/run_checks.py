@@ -9,6 +9,7 @@ CHECKS = [
     [sys.executable, 'tests/test_destination.py'],
     [sys.executable, 'tests/test_guards.py'],
     [sys.executable, 'tests/test_retention_state.py'],
+    [sys.executable, 'tests/test_password.py'],
     [sys.executable, 'tests/test_dialogs.py'],
     [sys.executable, 'tests/test_theme.py'],
     [sys.executable, 'tests/test_wizard_dismiss.py'],

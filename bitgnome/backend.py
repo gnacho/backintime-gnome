@@ -642,6 +642,44 @@ class Backend:
         except Exception:                 # noqa: BLE001
             return '?', '?'
 
+    def password_available(self):
+        """Whether an encrypted profile has its password at hand.
+
+        The core falls back to ``getpass`` (stdin) when nothing is in the
+        cache or the keyring, which in a GTK app means a hung or failed
+        mount. This only looks, it never asks.
+        """
+        mode = str(self.profile_mode())
+        if 'gocryptfs' not in mode and 'encfs' not in mode:
+            return True
+        try:
+            from password import Password
+            pw_id = 2 if mode.startswith('ssh') else 1
+            pid = self.cfg.currentProfile()
+            # Reuse the core's own container: the password set during this
+            # session lives in its in-memory db, not in a new instance.
+            pw = getattr(self.cfg, 'pw', None) or Password(self.cfg)
+            service = self.cfg.keyringServiceName(pid, mode, pw_id)
+            user = self.cfg.keyringUserName(pid)
+            if pw.db.get(f'{service}/{user}'):
+                return True
+            if self.cfg.passwordUseCache(pid) \
+                    and pw.passwordFromCache(service, user):
+                return True
+            if self.cfg.passwordSave(pid) \
+                    and pw.passwordFromKeyring(service, user):
+                return True
+        except Exception:                 # noqa: BLE001
+            return True     # unknown: never block the mount on a guess
+        return False
+
+    def set_profile_password(self, password):
+        """Store the encryption password where the core will find it."""
+        mode = self.profile_mode()
+        pw_id = 2 if str(mode).startswith('ssh') else 1
+        self.cfg.setPassword(password, mode=mode, pw_id=pw_id)
+        self.cfg.save()
+
     def ensure_mounted(self):
         """Mount the destination once and keep it for the app lifetime.
 
@@ -658,6 +696,11 @@ class Backend:
             return True, None
         if self._mount_manager is not None:
             return True, None
+        if not self.password_available():
+            self.destination_problem = (
+                'El perfil cifrado necesita su contraseña: desbloquéalo para '
+                'poder leer las copias.')
+            return False, self.destination_problem
         try:
             if str(self.profile_mode()) == 'local':
                 manager_cls.create(self.cfg).validate()
