@@ -51,6 +51,38 @@ class PreferencesWindow(Adw.PreferencesWindow):
         self.add(self._options_page())
         self.add(self._expert_page())
 
+    def _check_ssh(self, _btn=None):
+        """Probe the SSH destination from the values on screen."""
+        try:
+            host = self.cfg.sshHost() or ''
+            port = self.cfg.sshPort() or 22
+            user = self.cfg.sshUser() or ''
+            path = self.cfg.sshSnapshotsPath() or ''
+        except Exception as exc:          # noqa: BLE001
+            self._show_ssh_result(False, f'No se pudo leer la configuración: {exc}')
+            return
+        self.ssh_check_btn.set_sensitive(False)
+        self._show_ssh_result(True, 'Comprobando…')
+
+        def done(result, error):
+            self.ssh_check_btn.set_sensitive(True)
+            if error:
+                self._show_ssh_result(False, f'La comprobación falló: {error}')
+                return False
+            ok, message = result
+            self._show_ssh_result(ok, message)
+            return False
+
+        _backend.Worker(lambda: self.backend.check_ssh_destination(
+            host, port, user, path), done)
+
+    def _show_ssh_result(self, ok, message):
+        if self.ssh_result is None:
+            return
+        self.ssh_result.set_visible(True)
+        self.ssh_result.set_title('Todo listo' if ok else 'Hay un problema')
+        self.ssh_result.set_subtitle(message)
+
     def _save(self):
         try:
             self.cfg.save()
@@ -126,7 +158,8 @@ class PreferencesWindow(Adw.PreferencesWindow):
         mode_group.add(mode_row)
         self.mode_row = mode_row
 
-        path_row = Adw.ActionRow(title='Guardar instantáneas en')
+        self.path_row = Adw.ActionRow(title='Guardar instantáneas en')
+        path_row = self.path_row
         self.path_entry = Gtk.Entry(hexpand=True, valign=Gtk.Align.CENTER)
         try:
             self.path_entry.set_text(self.cfg.snapshotsPath())
@@ -174,6 +207,19 @@ class PreferencesWindow(Adw.PreferencesWindow):
                         self.cfg.sshSnapshotsPath, self.cfg.setSshSnapshotsPath)
         self._entry_row(self.ssh_group, 'Clave privada',
                         self.cfg.sshPrivateKeyFile, self.cfg.setSshPrivateKeyFile)
+
+        check_row = Adw.ActionRow(
+            title='Probar la conexión',
+            subtitle='Comprueba ssh, la ruta remota y que allí haya rsync')
+        self.ssh_check_btn = Gtk.Button(label='Probar')
+        self.ssh_check_btn.add_css_class('rw-soft')
+        self.ssh_check_btn.set_valign(Gtk.Align.CENTER)
+        self.ssh_check_btn.connect('clicked', self._check_ssh)
+        check_row.add_suffix(self.ssh_check_btn)
+        self.ssh_group.add(check_row)
+        self.ssh_result = Adw.ActionRow(title='', visible=False)
+        self.ssh_result.set_activatable(False)
+        self.ssh_group.add(self.ssh_result)
         page.add(self.ssh_group)
         self._update_ssh_visibility(current_mode)
 
@@ -249,7 +295,12 @@ class PreferencesWindow(Adw.PreferencesWindow):
         self._update_ssh_visibility(self.backend.profile_mode())
 
     def _update_ssh_visibility(self, mode):
-        self.ssh_group.set_visible('ssh' in mode)
+        ssh = 'ssh' in str(mode)
+        self.ssh_group.set_visible(ssh)
+        # The local folder row is meaningless for an SSH destination, which
+        # keeps its own remote path.
+        if getattr(self, 'path_row', None) is not None:
+            self.path_row.set_visible(not ssh)
 
     def _choose_snapshot_path(self, *_):
         dlg = Gtk.FileChooserNative(title='Elegir carpeta de destino',
