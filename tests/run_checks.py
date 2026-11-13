@@ -17,6 +17,7 @@ CHECKS = [
     [sys.executable, 'tests/test_wizard_dismiss.py'],
     [sys.executable, 'tests/test_encryption_ui.py'],
     [sys.executable, 'tests/test_encryption_integration.py'],
+    [sys.executable, 'tests/test_i18n.py'],
     [sys.executable, '-m', 'compileall', '-q', 'bitgnome'],
 ]
 

@@ -12,6 +12,7 @@ optdepends=('backintime: udev-based schedules with Back In Time 1.6.x'
             'cronie: cron-based automatic backups'
             'gocryptfs: encrypted profiles with Back In Time 2.0')
 depends=(backintime-cli gtk4 libadwaita python-gobject)
+makedepends=(gettext)
 source=("$pkgname-$pkgver.tar.gz::$url/archive/$_commit.tar.gz")
 sha256sums=('b7441701fc04a3325fc0528088b04ca6182c71c9fa4bfedf5e414449bfdc5bad')
 
@@ -31,6 +32,12 @@ package() {
     "$pkgdir/usr/share/icons/hicolor/scalable/apps/rewind.svg"
   install -Dm644 icons/rewind-128.png \
     "$pkgdir/usr/share/icons/hicolor/128x128/apps/rewind.png"
+
+  for catalogue in po/*.po; do
+    lang=$(basename "$catalogue" .po)
+    msgfmt --output-file="$pkgdir/usr/share/locale/$lang/LC_MESSAGES/$pkgname.mo" \
+      "po/$catalogue"
+  done
 
   python -m compileall -q -d "/usr/lib/$pkgname" "$pkgdir/usr/lib/$pkgname"
 }

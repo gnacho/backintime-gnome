@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=Back In Time (GNOME)
 Comment=Copias de seguridad con rsync - interfaz GTK4/libadwaita
+Comment[en]=rsync backups - GTK4/libadwaita interface
 Exec=backintime-gnome
 Icon=rewind
 Type=Application

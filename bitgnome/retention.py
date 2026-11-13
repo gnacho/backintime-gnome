@@ -13,8 +13,23 @@ deletions of named snapshots whose names could not be read.
 import datetime
 import os
 
+from bitgnome.i18n import _, ngettext
+
 MAX_PATHS = 200000
 NEVER = datetime.date(1, 1, 1)
+
+
+def _unit_label(unit_name, value):
+    """'2 años' for the unit the profile uses, singular or plural."""
+    if unit_name == 'WEEK':
+        return ngettext('{n} semana', '{n} semanas', value).format(n=value)
+    if unit_name == 'YEAR':
+        return ngettext('{n} año', '{n} años', value).format(n=value)
+    if unit_name == 'MONTH':
+        return ngettext('{n} mes', '{n} meses', value).format(n=value)
+    if unit_name == 'HOUR':
+        return ngettext('{n} hora', '{n} horas', value).format(n=value)
+    return ngettext('{n} día', '{n} días', value).format(n=value)
 
 
 def _sid_date(sid):
@@ -59,10 +74,6 @@ def state(cfg):
     if unit_name is None:
         unit_name = {10: 'HOUR', 20: 'DAY', 30: 'WEEK', 40: 'MONTH',
                      80: 'YEAR'}.get(unit, '')
-    labels = {'DAY': ('día', 'días'), 'WEEK': ('semana', 'semanas'),
-              'YEAR': ('año', 'años'), 'MONTH': ('mes', 'meses'),
-              'HOUR': ('hora', 'horas')}
-    singular, plural = labels.get(unit_name, ('día', 'días'))
     try:
         cutoff = cfg.removeOldSnapshotsDate()
     except Exception:  # noqa: BLE001
@@ -71,10 +82,10 @@ def state(cfg):
         cutoff = NEVER
     supported = unit_name in ('DAY', 'WEEK', 'YEAR')
     return {'value': value, 'unit': unit_name,
-            'label': f'{value} {singular if value == 1 else plural}',
+            'label': _unit_label(unit_name, value),
             'cutoff': cutoff, 'engine_inert': cutoff <= NEVER,
             'unsupported_unit': not supported,
-            'supported_units': sorted(('días', 'semanas', 'años'))}
+            'supported_units': sorted((_('días'), _('semanas'), _('años')))}
 
 
 def plan(sids, cutoff, keep_named):

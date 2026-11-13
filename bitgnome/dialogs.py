@@ -10,13 +10,14 @@ from gi.repository import Adw, Gtk, Pango  # noqa: E402
 
 from bitgnome.backend import format_size  # noqa: E402
 from bitgnome import ui as _ui  # noqa: E402
+from bitgnome.i18n import _  # noqa: E402
 
 
 class RestoreDialog(Adw.Window):
     """Options dialog for restoring paths from a snapshot."""
 
     def __init__(self, parent, backend, sid, rel_path, other_location=False):
-        super().__init__(transient_for=parent, modal=True, title='Restaurar',
+        super().__init__(transient_for=parent, modal=True, title=_('Restaurar'),
                          default_width=460)
         _ui.apply_theme(self)
         self.backend = backend
@@ -36,23 +37,27 @@ class RestoreDialog(Adw.Window):
         img.add_css_class('accent')
         head.append(img)
         labels = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        title = Gtk.Label(label=f'Restaurar «{os.path.basename(rel_path)}»', xalign=0)
+        title = Gtk.Label(
+            label=_('Restaurar «{name}»').format(
+                name=os.path.basename(rel_path)), xalign=0)
         title.add_css_class('title-3')
         try:
             snap_name = sid.displayName
         except Exception:  # noqa: BLE001
             snap_name = str(sid)
-        sub = Gtk.Label(label=f'Desde la instantánea «{snap_name}»', xalign=0)
+        sub = Gtk.Label(
+            label=_('Desde la instantánea «{name}»').format(name=snap_name),
+            xalign=0)
         sub.add_css_class('dim-label')
         labels.append(title)
         labels.append(sub)
         head.append(labels)
         box.append(head)
 
-        dest_group = Adw.PreferencesGroup(title='Destino')
-        self.orig_check = Gtk.CheckButton(label='Ubicación original')
+        dest_group = Adw.PreferencesGroup(title=_('Destino'))
+        self.orig_check = Gtk.CheckButton(label=_('Ubicación original'))
         self.orig_check.set_active(not other_location)
-        orig_row = Adw.ActionRow(title='Ubicación original',
+        orig_row = Adw.ActionRow(title=_('Ubicación original'),
                                  subtitle=rel_path if rel_path.startswith('/') else '/' + rel_path)
         orig_row.add_prefix(self.orig_check)
         orig_row.set_activatable_widget(self.orig_check)
@@ -60,8 +65,8 @@ class RestoreDialog(Adw.Window):
 
         self.other_check = Gtk.CheckButton(group=self.orig_check)
         self.other_check.set_active(other_location)
-        self.other_row = Adw.ActionRow(title='Otra carpeta…')
-        self.other_entry = Gtk.Entry(placeholder_text='/ruta/destino',
+        self.other_row = Adw.ActionRow(title=_('Otra carpeta…'))
+        self.other_entry = Gtk.Entry(placeholder_text=_('/ruta/destino'),
                                      hexpand=True, valign=Gtk.Align.CENTER,
                                      sensitive=other_location)
         self.other_check.connect('toggled', lambda b:
@@ -72,22 +77,22 @@ class RestoreDialog(Adw.Window):
         dest_group.add(self.other_row)
         box.append(dest_group)
 
-        opts = Adw.PreferencesGroup(title='Opciones')
+        opts = Adw.PreferencesGroup(title=_('Opciones'))
         self.sw_backup = self._switch_row(
-            opts, 'Crear copia de los archivos existentes',
-            'Renombra los actuales a archivo.backup.YYYYMMDD', True)
+            opts, _('Crear copia de los archivos existentes'),
+            _('Renombra los actuales a archivo.backup.YYYYMMDD'), True)
         self.sw_only_new = self._switch_row(
-            opts, 'Restaurar solo archivos nuevos o más recientes',
-            'Equivale a rsync --update', False)
+            opts, _('Restaurar solo archivos nuevos o más recientes'),
+            _('Equivale a rsync --update'), False)
         self.sw_delete = self._switch_row(
-            opts, 'Eliminar archivos que no están en la instantánea',
-            'Peligroso: borra archivos posteriores a la copia', False)
+            opts, _('Eliminar archivos que no están en la instantánea'),
+            _('Peligroso: borra archivos posteriores a la copia'), False)
         box.append(opts)
 
         btns = Gtk.Box(spacing=8, halign=Gtk.Align.END)
-        cancel = Gtk.Button(label='Cancelar')
+        cancel = Gtk.Button(label=_('Cancelar'))
         cancel.connect('clicked', lambda *_: self.close())
-        ok = Gtk.Button(label='Restaurar')
+        ok = Gtk.Button(label=_('Restaurar'))
         ok.add_css_class('suggested-action')
         ok.connect('clicked', self._confirm)
         btns.append(cancel)
@@ -102,14 +107,14 @@ class RestoreDialog(Adw.Window):
         group.add(row)
         return sw
 
-    def _confirm(self, *_):
+    def _confirm(self, *_args):
         restore_to = ''
         if self.other_check.get_active():
             restore_to = self.other_entry.get_text().strip()
             if not restore_to:
                 self.other_entry.add_css_class('error')
                 self.other_entry.set_placeholder_text(
-                    'Elige una carpeta de destino')
+                    _('Elige una carpeta de destino'))
                 return
             self.other_entry.remove_css_class('error')
         if self.on_confirm:
@@ -125,7 +130,7 @@ class LogViewDialog(Adw.Window):
 
     def __init__(self, parent, backend):
         super().__init__(transient_for=parent, modal=False,
-                         title='Registro de instantáneas',
+                         title=_('Registro de instantáneas'),
                          default_width=760, default_height=520)
         self.backend = backend
         self.filter = 'all'
@@ -138,8 +143,8 @@ class LogViewDialog(Adw.Window):
         chips = Gtk.Box(spacing=6)
         chips.set_margin_start(6)
         self.chip_buttons = {}
-        for key, label in (('all', 'Todo'), ('I', 'Info'),
-                           ('W', 'Avisos'), ('E', 'Errores')):
+        for key, label in (('all', _('Todo')), ('I', _('Info')),
+                           ('W', _('Avisos')), ('E', _('Errores'))):
             b = Gtk.ToggleButton(label=label)
             b.add_css_class('pill')
             if key == 'all':
@@ -172,7 +177,7 @@ class LogViewDialog(Adw.Window):
 
     def _load(self):
         buf = self.view.get_buffer()
-        buf.set_text('cargando…')
+        buf.set_text(_('cargando…'))
         from bitgnome.backend import Worker
         token = getattr(self, '_load_token', 0) + 1
         self._load_token = token
@@ -192,7 +197,7 @@ class LogViewDialog(Adw.Window):
         }
         end = buf.get_end_iter()
         if error or lines is None:
-            lines = [f'No se pudo leer el registro: {error}']
+            lines = [_('No se pudo leer el registro: {error}').format(error=error)]
         else:
             lines = list(lines)
         for line in lines:
@@ -204,7 +209,7 @@ class LogViewDialog(Adw.Window):
             if self.filter != 'all' and lv != self.filter:
                 continue
             buf.insert_with_tags(end, line + '\n', tags.get(lv))
-            _, end = buf.get_bounds()
+            end = buf.get_bounds()[1]
         return False
 
 
@@ -215,7 +220,7 @@ class DiffDialog(Adw.Window):
     def __init__(self, parent, sid, rel_path, prev_sid):
         name = os.path.basename(rel_path.rstrip('/')) or rel_path
         super().__init__(transient_for=parent, modal=False,
-                         title=f'Cambios - {name}',
+                         title=_('Cambios - {name}').format(name=name),
                          default_width=820, default_height=560)
         _ui.apply_theme(self)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -262,27 +267,31 @@ class DiffDialog(Adw.Window):
         old_lines = read(old_path) if old_path else None
 
         if new_lines == 'too-big' or old_lines == 'too-big':
-            buf.set_text('El archivo es demasiado grande para el diff '
-                         'interno (más de 2 MB).')
+            buf.set_text(
+                _('El archivo es demasiado grande para el diff interno '
+                  '(más de 2 MB).'))
             return
         if new_lines is None:
-            buf.set_text('No se puede leer el archivo en la instantánea.')
+            buf.set_text(_('No se puede leer el archivo en la instantánea.'))
             return
         if prev_sid is None:
-            buf.set_text('No hay una instantánea anterior con la que '
-                         'comparar: este es el punto más antiguo.')
+            buf.set_text(
+                _('No hay una instantánea anterior con la que comparar: '
+                  'este es el punto más antiguo.'))
             return
         if old_lines is None:
-            buf.set_text('El archivo no existía en la instantánea anterior '
-                         '(es nuevo).')
+            buf.set_text(_('El archivo no existía en la instantánea anterior '
+                           '(es nuevo).'))
             return
 
         diff = difflib.unified_diff(old_lines, new_lines,
-                                    fromfile=f'anterior ({prev_sid})',
-                                    tofile=f'actual ({sid})', lineterm='')
+                                    fromfile=_('anterior ({sid})').format(
+                                        sid=prev_sid),
+                                    tofile=_('actual ({sid})').format(sid=sid),
+                                    lineterm='')
         out = list(diff)
         if not out:
-            buf.set_text('Sin diferencias con la instantánea anterior.')
+            buf.set_text(_('Sin diferencias con la instantánea anterior.'))
             return
         for line in out:
             it = buf.get_end_iter()
@@ -300,7 +309,7 @@ class RetentionDialog(Adw.Window):
     """What the retention policy would remove, and what that would cost."""
 
     def __init__(self, parent, result, on_settings=None):
-        super().__init__(transient_for=parent, modal=True, title='Retención',
+        super().__init__(transient_for=parent, modal=True, title=_('Retención'),
                          default_width=760, default_height=620)
         _ui.apply_theme(self)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -318,21 +327,24 @@ class RetentionDialog(Adw.Window):
 
         if result.get('engine_inert'):
             if result.get('unsupported_unit'):
-                intro_text = (
-                    f'La retención está configurada en {result["label"]}, una '
-                    'unidad que el motor no soporta: solo aplica días, '
-                    'semanas y años. No se borrará ninguna instantánea.')
-                note_text = ('Cambia la conservación a 2 semanas, 1 año o 2 '
-                             'años para que el borrado automático funcione.')
+                intro_text = _(
+                    'La retención está configurada en {label}, una unidad que '
+                    'el motor no soporta: solo aplica días, semanas y años. '
+                    'No se borrará ninguna instantánea.').format(
+                        label=result["label"])
+                note_text = _(
+                    'Cambia la conservación a 2 semanas, 1 año o 2 años para '
+                    'que el borrado automático funcione.')
             else:
-                intro_text = (
-                    f'La retención está configurada en {result["label"]}, '
-                    'pero este núcleo de Back In Time no la aplica: '
+                intro_text = _(
+                    'La retención está configurada en {label}, pero este '
+                    'núcleo de Back In Time no la aplica: '
                     'removeOldSnapshotsDate() devuelve 1/1/1, así que no se '
-                    'borrará ninguna instantánea.')
-                note_text = ('No es un problema de esta aplicación: el motor '
-                             'instalado no ejecuta la retención. No hay '
-                             'archivos en riesgo por borrado automático.')
+                    'borrará ninguna instantánea.').format(label=result["label"])
+                note_text = _(
+                    'No es un problema de esta aplicación: el motor instalado '
+                    'no ejecuta la retención. No hay archivos en riesgo por '
+                    'borrado automático.')
             intro = Gtk.Label(label=intro_text, xalign=0, wrap=True)
             intro.add_css_class('heading')
             body.append(intro)
@@ -345,18 +357,19 @@ class RetentionDialog(Adw.Window):
         if not result.get('complete', True) and result.get('reason') == \
                 'unreadable' and not result.get('doomed'):
             intro = Gtk.Label(
-                label=f'La retención está en {result["label"]}, pero ahora '
-                      'mismo no se puede leer el destino, así que no se puede '
-                      'saber qué instantáneas se borrarían ni qué archivos se '
-                      'perderían.',
+                label=_(
+                    'La retención está en {label}, pero ahora mismo no se '
+                    'puede leer el destino, así que no se puede saber qué '
+                    'instantáneas se borrarían ni qué archivos se '
+                    'perderían.').format(label=result["label"]),
                 xalign=0, wrap=True)
             intro.add_css_class('heading')
             body.append(intro)
             note = Gtk.Label(xalign=0, wrap=True)
             note.add_css_class('dim-label')
-            note.set_text('Conecta el destino y vuelve a revisar la '
-                          'retención. Las instantáneas con nombre no se '
-                          'borran nunca.')
+            note.set_text(
+                _('Conecta el destino y vuelve a revisar la retención. Las '
+                  'instantáneas con nombre no se borran nunca.'))
             body.append(note)
             self._buttons(body, on_settings)
             return
@@ -364,9 +377,11 @@ class RetentionDialog(Adw.Window):
         cutoff = result['cutoff']
         count = len(result['doomed'])
         intro = Gtk.Label(
-            label=f'{count} instantáneas anteriores al {cutoff:%d/%m/%Y} '
-                  f'(retención: {result["label"]}) se eliminarán en la '
-                  'próxima copia.',
+            label=_(
+                '{count} instantáneas anteriores al {cutoff:%d/%m/%Y} '
+                '(retención: {label}) se eliminarán en la próxima '
+                'copia.').format(count=count, cutoff=cutoff,
+                                 label=result["label"]),
             xalign=0, wrap=True)
         intro.add_css_class('heading')
         body.append(intro)
@@ -374,49 +389,54 @@ class RetentionDialog(Adw.Window):
         lost = result['lost']
         complete = result.get('complete', True)
         title = Gtk.Label(xalign=0, wrap=True)
-        title.set_markup(f'<b>Solo existen ahí: {len(lost)} archivos</b>')
+        title.set_markup(
+            _('<b>Solo existen ahí: {n} archivos</b>').format(n=len(lost)))
         body.append(title)
         if not complete:
             warn = Gtk.Label(xalign=0, wrap=True)
             warn.add_css_class('dim-label')
             if result.get('reason') == 'unreadable':
-                warn.set_text('No se pudo leer todo el contenido (permisos o '
-                              'destino sin montar). No se puede asegurar qué '
-                              'se perdería.')
+                warn.set_text(
+                    _('No se pudo leer todo el contenido (permisos o destino '
+                      'sin montar). No se puede asegurar qué se perdería.'))
             else:
-                warn.set_text('Hay más archivos de los que se pueden analizar '
-                              'de una vez. No se puede asegurar qué se '
-                              'perdería; lista incompleta.')
+                warn.set_text(
+                    _('Hay más archivos de los que se pueden analizar de una '
+                      'vez. No se puede asegurar qué se perdería; lista '
+                      'incompleta.'))
             body.append(warn)
         elif lost:
             hint = Gtk.Label(xalign=0, wrap=True)
             hint.add_css_class('dim-label')
-            hint.set_text('Si se borran esas instantáneas, estos archivos se '
-                          'pierden. No hay versión más reciente de ellos.')
+            hint.set_text(
+                _('Si se borran esas instantáneas, estos archivos se pierden. '
+                  'No hay versión más reciente de ellos.'))
             body.append(hint)
             body.append(self._path_list(lost))
         else:
             ok = Gtk.Label(xalign=0, wrap=True)
             ok.add_css_class('dim-label')
-            ok.set_text('Todos los archivos de esas instantáneas existen en '
-                        'alguna instantánea que se conserva.')
+            ok.set_text(
+                _('Todos los archivos de esas instantáneas existen en alguna '
+                  'instantánea que se conserva.'))
             body.append(ok)
 
         mine = Gtk.Label(xalign=0, wrap=True)
-        mine.set_markup('Con versión en una instantánea que se conserva: '
-                        f'<b>{result["superseded"]}</b>')
+        mine.set_markup(
+            _('Con versión en una instantánea que se conserva: <b>{n}</b>')
+            .format(n=result["superseded"]))
         body.append(mine)
         self._buttons(body, on_settings)
 
     def _buttons(self, body, on_settings):
         buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END)
         if on_settings is not None:
-            settings_btn = Gtk.Button(label='Abrir ajustes')
+            settings_btn = Gtk.Button(label=_('Abrir ajustes'))
             settings_btn.add_css_class('rw-soft')
             settings_btn.connect('clicked', lambda *_: (
                 self.close(), on_settings()))
             buttons.append(settings_btn)
-        close = Gtk.Button(label='Entendido')
+        close = Gtk.Button(label=_('Entendido'))
         close.add_css_class('rw-primary')
         close.connect('clicked', lambda *_: self.close())
         buttons.append(close)
@@ -426,7 +446,7 @@ class RetentionDialog(Adw.Window):
     def _path_list(paths, limit=300):
         text = '\n'.join('/' + path for path in paths[:limit])
         if len(paths) > limit:
-            text += f'\n… y {len(paths) - limit} más'
+            text += _('\n… y {n} más').format(n=len(paths) - limit)
         return _text_view(text)
 
 
@@ -439,7 +459,7 @@ class PasswordDialog(Adw.Window):
 
     def __init__(self, parent, on_accept):
         super().__init__(transient_for=parent, modal=True,
-                         title='Desbloquear el perfil cifrado',
+                         title=_('Desbloquear el perfil cifrado'),
                          default_width=420, resizable=False)
         _ui.apply_theme(self)
         self.on_accept = on_accept
@@ -451,24 +471,24 @@ class PasswordDialog(Adw.Window):
         box.set_margin_end(20)
         self.set_content(box)
 
-        title = Gtk.Label(label='Este perfil guarda las copias cifradas',
+        title = Gtk.Label(label=_('Este perfil guarda las copias cifradas'),
                           xalign=0, wrap=True)
         title.add_css_class('heading')
         box.append(title)
-        hint = Gtk.Label(label='Escribe la contraseña del perfil para leer '
-                               'las instantáneas.', xalign=0, wrap=True)
+        hint = Gtk.Label(label=_('Escribe la contraseña del perfil para leer '
+                                 'las instantáneas.'), xalign=0, wrap=True)
         hint.add_css_class('dim-label')
         box.append(hint)
 
         self.entry = Gtk.PasswordEntry(show_peek_icon=True)
-        self.entry.set_property('placeholder-text', 'Contraseña')
+        self.entry.set_property('placeholder-text', _('Contraseña'))
         self.entry.connect('activate', lambda *_: self._accept())
         box.append(self.entry)
 
         buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END)
-        cancel = Gtk.Button(label='Cancelar')
+        cancel = Gtk.Button(label=_('Cancelar'))
         cancel.connect('clicked', lambda *_: self.close())
-        accept = Gtk.Button(label='Desbloquear')
+        accept = Gtk.Button(label=_('Desbloquear'))
         accept.add_css_class('suggested-action')
         accept.connect('clicked', lambda *_: self._accept())
         buttons.append(cancel)

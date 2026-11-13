@@ -5,6 +5,8 @@ It does not reimplement the engine: it imports `common/` from Back In Time and
 drives `config.Config`, `snapshots.Snapshots` and `snapshotlog.SnapshotLog`
 exactly like the Qt client does.
 
+[Versión en castellano](README.es.md)
+
 ## Compatibility
 
 Both core series work:
@@ -92,6 +94,26 @@ Search order for `common/`: `$BACKINTIME_COMMON`,
 `~/.local/share/backintime-gnome/common`, `/usr/share/backintime/common`,
 `/usr/local/share/backintime/common`, and `../backintime/common` (development).
 
+## Languages
+
+Spanish is the source language: the strings live in the code, so a Spanish
+session needs no catalogue at all. English is translated in `po/en.po` and the
+package installs its `.mo` in `/usr/share/locale`.
+
+`BACKINTIME_GNOME_LANG` pins the language regardless of the session locale, for
+example `BACKINTIME_GNOME_LANG=en ./backintime-gnome`.
+
+The screenshots below are taken with the English interface. The Spanish ones
+live in `capturas/es/`.
+
+To add a language:
+
+```bash
+cp po/en.po po/fr.po          # translate the msgstr entries
+./po/update-po.sh             # regenerate the template and merge
+./po/update-po.sh --build     # compile po/locale/, which a checkout reads
+```
+
 ## Features
 
 The interface is built around two questions: *is everything protected right
@@ -159,19 +181,23 @@ that layout is **Rewind**; the package and the repository keep the
 
 ## Screenshots
 
-![Main window](capturas/ventana-principal.png)
+English interface, generated from a throwaway profile:
 
-![Time travel](capturas/viaje-en-el-tiempo.png)
+![Main window](capturas/en/main-window.png)
 
-![Search](capturas/busqueda.png)
+![Time travel](capturas/en/time-travel.png)
 
-![Settings](capturas/ajustes.png)
+![Search](capturas/en/search.png)
+
+![Settings](capturas/en/settings.png)
+
+Spanish interface: `capturas/es/`, used by [README.es.md](README.es.md).
 
 ## Roadmap
 
 - Diff view with a configurable external tool (`meld`).
 - Real progress bar during restore.
-- Meson/Flatpak packaging and translations (reuse `common/po`).
+- Meson/Flatpak packaging.
 
 ## Notes
 

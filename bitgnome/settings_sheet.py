@@ -15,19 +15,20 @@ from gi.repository import Adw, Gtk  # noqa: E402
 
 from . import backend as _backend  # noqa: E402
 from . import ui  # noqa: E402
+from .i18n import _  # noqa: E402
 
 MODE_LABELS = {
-    'DISABLED': 'Manual', 'AT_EVERY_BOOT': 'Al arrancar',
-    'MINUTES_5': 'Cada 5 minutos', 'MINUTES_10': 'Cada 10 minutos',
-    'MINUTES_30': 'Cada 30 minutos', 'HOUR': 'Cada hora',
-    'HOURS_2': 'Cada 2 horas', 'HOURS_4': 'Cada 4 horas',
-    'HOURS_6': 'Cada 6 horas', 'HOURS_12': 'Cada 12 horas',
-    'CUSTOM_HOUR': 'Horas personalizadas', 'DAY': 'Cada día',
-    'REPEATEDLY': 'Repetidamente (anacron)', 'UDEV': 'Al conectar la unidad',
-    'WEEK': 'Cada semana', 'MONTH': 'Cada mes', 'YEAR': 'Cada año',
+    'DISABLED': _('Manual'), 'AT_EVERY_BOOT': _('Al arrancar'),
+    'MINUTES_5': _('Cada 5 minutos'), 'MINUTES_10': _('Cada 10 minutos'),
+    'MINUTES_30': _('Cada 30 minutos'), 'HOUR': _('Cada hora'),
+    'HOURS_2': _('Cada 2 horas'), 'HOURS_4': _('Cada 4 horas'),
+    'HOURS_6': _('Cada 6 horas'), 'HOURS_12': _('Cada 12 horas'),
+    'CUSTOM_HOUR': _('Horas personalizadas'), 'DAY': _('Cada día'),
+    'REPEATEDLY': _('Repetidamente (anacron)'), 'UDEV': _('Al conectar la unidad'),
+    'WEEK': _('Cada semana'), 'MONTH': _('Cada mes'), 'YEAR': _('Cada año'),
 }
-UNIT_NAMES = {'HOUR': 'horas', 'DAY': 'días', 'WEEK': 'semanas',
-              'MONTH': 'meses', 'YEAR': 'años'}
+UNIT_NAMES = {'HOUR': _('horas'), 'DAY': _('días'), 'WEEK': _('semanas'),
+              'MONTH': _('meses'), 'YEAR': _('años')}
 # The core only removes snapshots for days, weeks and years; months and
 # hours resolve to "never", so they are not offered.
 RETENTION_UNSUPPORTED = ('MONTH', 'HOUR')
@@ -39,17 +40,17 @@ def _safe(getter, default=None):
 
 
 SCHEDULE_MODES = [
-    ('hour', 'Cada hora'),
-    ('day', 'Cada día'),
-    ('week', 'Cada semana'),
-    ('none', 'Manual'),
+    ('hour', _('Cada hora')),
+    ('day', _('Cada día')),
+    ('week', _('Cada semana')),
+    ('none', _('Manual')),
 ]
 
 
 class SettingsSheet(Adw.Window):
     def __init__(self, app, on_change=None):
         super().__init__(transient_for=app.get_active_window(), modal=True,
-                         title='Ajustes', default_width=660, default_height=720)
+                         title=_('Ajustes'), default_width=660, default_height=720)
         self.app = app
         self.backend = app.backend
         self.cfg = app.backend.cfg
@@ -63,12 +64,12 @@ class SettingsSheet(Adw.Window):
 
         head = Gtk.Box(spacing=8)
         head.add_css_class('rw-sheet-head')
-        title = Gtk.Label(label='Ajustes', xalign=0, hexpand=True)
+        title = Gtk.Label(label=_('Ajustes'), xalign=0, hexpand=True)
         title.add_css_class('rw-sheet-title')
         head.append(title)
         close = Gtk.Button(icon_name='window-close-symbolic')
         close.add_css_class('rw-ghost')
-        ui.a11y(close, 'Cerrar ajustes')
+        ui.a11y(close, _('Cerrar ajustes'))
         close.connect('clicked', lambda *_: self.close())
         head.append(close)
         root.append(head)
@@ -85,7 +86,7 @@ class SettingsSheet(Adw.Window):
         scrolled.set_child(self.body)
 
         if self.cfg is None:
-            self.body.append(ui.row('Núcleo de Back In Time no disponible',
+            self.body.append(ui.row(_('Núcleo de Back In Time no disponible'),
                                     self.backend.error or ''))
             return
 
@@ -112,7 +113,8 @@ class SettingsSheet(Adw.Window):
             return False
         reason = check()
         if reason:
-            self._show_error(reason + ': no se ha cambiado nada')
+            self._show_error(_('{reason}: no se ha cambiado nada').format(
+                reason=reason))
             return True
         return False
 
@@ -124,14 +126,14 @@ class SettingsSheet(Adw.Window):
         ok = ui.save(self.cfg)
         if self._error_label is not None:
             self._error_label.set_text('' if ok
-                                       else 'No se pudo guardar la configuración')
+                                       else _('No se pudo guardar la configuración'))
         if self.on_change:
             self.on_change()
         return ok
 
     # ------------------------------------------------------------- folders
     def _build_folders(self):
-        self.body.append(ui.group_title('Qué se copia'))
+        self.body.append(ui.group_title(_('Qué se copia')))
         self.folders_box = Gtk.FlowBox()
         self.folders_box.set_selection_mode(Gtk.SelectionMode.NONE)
         self.folders_box.set_max_children_per_line(4)
@@ -151,7 +153,7 @@ class SettingsSheet(Adw.Window):
             name = os.path.basename(path.rstrip('/')) or path
             self.folders_box.insert(
                 ui.chip(name, path, lambda p=path, t=ftype: self._remove_include(p, t)), -1)
-        add = Gtk.Button(label='+ Añadir carpeta')
+        add = Gtk.Button(label=_('+ Añadir carpeta'))
         add.add_css_class('rw-chip')
         add.connect('clicked', self._add_include)
         self.folders_box.insert(add, -1)
@@ -167,7 +169,7 @@ class SettingsSheet(Adw.Window):
             self._save()
             self._fill_folders()
 
-        ui.choose_folder(self, 'Añadir a la copia', on_path)
+        ui.choose_folder(self, _('Añadir a la copia'), on_path)
 
     def _remove_include(self, path, ftype):
         entries = [e for e in self.cfg.include() if e != (path, ftype)]
@@ -190,7 +192,7 @@ class SettingsSheet(Adw.Window):
         return self.SCHEDULE_KEYS.get(self._schedule_mode_name(), 'none')
 
     def _build_schedule(self):
-        self.body.append(ui.group_title('Cada cuánto'))
+        self.body.append(ui.group_title(_('Cada cuánto')))
         current = self._current_schedule()
         mode_name = self._schedule_mode_name()
         known = mode_name in self.SCHEDULE_KEYS
@@ -198,13 +200,14 @@ class SettingsSheet(Adw.Window):
             [(key, label) for key, label in SCHEDULE_MODES],
             current if known else '__none__',
             self._on_schedule_changed)
-        subtitle = 'Cuándo crear puntos de restauración'
+        subtitle = _('Cuándo crear puntos de restauración')
         if not known and mode_name:
-            subtitle = f'Ahora: {MODE_LABELS.get(mode_name, mode_name)}'
-        self.body.append(ui.row('Frecuencia', subtitle, control))
+            subtitle = _('Ahora: {mode}').format(
+                mode=MODE_LABELS.get(mode_name, mode_name))
+        self.body.append(ui.row(_('Frecuencia'), subtitle, control))
 
-        self.schedule_status = ui.row('Estado', 'Comprobando el servicio de '
-                                      'cron…', None)
+        self.schedule_status = ui.row(_('Estado'),
+                                      _('Comprobando el servicio de cron…'), None)
         self.body.append(self.schedule_status)
         self._refresh_schedule_status()
 
@@ -212,8 +215,8 @@ class SettingsSheet(Adw.Window):
                             valign=Gtk.Align.CENTER)
         switch.connect('notify::active', lambda sw, _: (
             self.cfg.setNotify(sw.get_active()), self._save()))
-        self.body.append(ui.row('Avisar si una copia falla',
-                                'Notificaciones del escritorio', switch))
+        self.body.append(ui.row(_('Avisar si una copia falla'),
+                                _('Notificaciones del escritorio'), switch))
 
     def _on_schedule_changed(self, key):
         mode = {
@@ -240,17 +243,17 @@ class SettingsSheet(Adw.Window):
                 return False
             status = status if isinstance(status, dict) else {}
             if error or not status:
-                text = 'No se pudo comprobar el estado de cron'
+                text = _('No se pudo comprobar el estado de cron')
             elif status.get('problem') == 'udev':
-                text = 'Al conectar la unidad no está disponible'
+                text = _('Al conectar la unidad no está disponible')
             elif not status.get('needs_cron'):
-                text = 'No depende de cron'
+                text = _('No depende de cron')
             elif status.get('problem') == 'binary':
-                text = 'No hay cron instalado: no se ejecutará'
+                text = _('No hay cron instalado: no se ejecutará')
             elif status.get('problem') == 'service':
-                text = 'Cron instalado pero su servicio está parado'
+                text = _('Cron instalado pero su servicio está parado')
             else:
-                text = 'Listo: cron está activo'
+                text = _('Listo: cron está activo')
             self.schedule_status.subtitle.set_text(text)
             return False
 
@@ -258,35 +261,38 @@ class SettingsSheet(Adw.Window):
 
     # ---------------------------------------------------------- destination
     def _build_destination(self):
-        self.body.append(ui.group_title('Dónde'))
+        self.body.append(ui.group_title(_('Dónde')))
         mode, path = self.backend.profile_summary()
         local = self.backend.profile_mode() == 'local'
-        change = Gtk.Button(label='Cambiar…')
+        change = Gtk.Button(label=_('Cambiar…'))
         change.add_css_class('rw-soft')
         change.set_sensitive(local)
         change.connect('clicked', self._change_destination)
-        subtitle = path or 'sin configurar'
+        subtitle = path or _('sin configurar')
         if not local:
-            subtitle = (f'Perfil en modo {mode}: la ruta se edita en '
-                        'Gestionar perfiles')
-        self.destination_row = ui.row(f'Destino ({mode})', subtitle, change)
+            subtitle = _('Perfil en modo {mode}: la ruta se edita en '
+                         'Gestionar perfiles').format(mode=mode)
+        self.destination_row = ui.row(_('Destino ({mode})').format(mode=mode),
+                                      subtitle, change)
         self.body.append(self.destination_row)
         encrypted = ('gocryptfs' in mode or 'encfs' in mode)
         if encrypted:
             backend = 'EncFS' if 'encfs' in mode else 'Gocryptfs'
-            encrypt_subtitle = f'Cifrado activo ({backend})'
-            encrypt_label = 'Configurar cifrado…'
+            encrypt_subtitle = _('Cifrado activo ({backend})').format(
+                backend=backend)
+            encrypt_label = _('Configurar cifrado…')
         else:
-            encrypt_subtitle = 'Protege el contenido de las copias'
-            encrypt_label = 'Cifrar copia…'
+            encrypt_subtitle = _('Protege el contenido de las copias')
+            encrypt_label = _('Cifrar copia…')
         encrypt = Gtk.Button(label=encrypt_label)
         encrypt.add_css_class('rw-soft')
         encrypt.connect('clicked', self._open_encryption_setup)
         if encrypted and ('encfs' in mode or 'ssh' in mode):
             encrypt.set_sensitive(False)
-            kind = 'SSH' if 'ssh' in mode else 'EncFS legado'
-            encrypt_subtitle = f'Cifrado {kind}; usa Gestionar perfiles'
-        self.body.append(ui.row('Cifrado', encrypt_subtitle, encrypt))
+            kind = 'SSH' if 'ssh' in mode else _('EncFS legado')
+            encrypt_subtitle = _('Cifrado {kind}; usa Gestionar perfiles').format(
+                kind=kind)
+        self.body.append(ui.row(_('Cifrado'), encrypt_subtitle, encrypt))
 
     def _open_encryption_setup(self, _btn):
         from .encryption import EncryptionSetupDialog
@@ -315,11 +321,11 @@ class SettingsSheet(Adw.Window):
             except Exception:  # noqa: BLE001
                 pass
 
-        ui.choose_folder(self, 'Elegir carpeta de destino', on_path)
+        ui.choose_folder(self, _('Elegir carpeta de destino'), on_path)
 
     # ------------------------------------------------------------ retention
     def _build_retention(self):
-        self.body.append(ui.group_title('Conservación'))
+        self.body.append(ui.group_title(_('Conservación')))
         enabled, value, unit = self._retention()
         unit_name = getattr(unit, 'name', '')
         if not enabled:
@@ -332,15 +338,16 @@ class SettingsSheet(Adw.Window):
             current = '2y'
         else:
             current = 'custom'
-        options = [('2w', '2 semanas'), ('1y', '1 año'), ('2y', '2 años'),
-                   ('forever', 'Siempre')]
+        options = [('2w', _('2 semanas')), ('1y', _('1 año')),
+                   ('2y', _('2 años')), ('forever', _('Siempre'))]
         control = ui.segmented(options, current, self._on_retention_changed)
-        subtitle = 'Las más antiguas se eliminan solas para hacer hueco'
+        subtitle = _('Las más antiguas se eliminan solas para hacer hueco')
         if current == 'custom':
-            subtitle = f'Ahora: {value} {UNIT_NAMES.get(unit_name, "")}'.strip()
+            subtitle = _('Ahora: {count} {unit}').format(
+                count=value, unit=UNIT_NAMES.get(unit_name, '')).strip()
             if unit_name in RETENTION_UNSUPPORTED:
-                subtitle += ' (el motor no borra con esta unidad)'
-        self.body.append(ui.row('Conservar copias durante', subtitle, control))
+                subtitle += ' ' + _('(el motor no borra con esta unidad)')
+        self.body.append(ui.row(_('Conservar copias durante'), subtitle, control))
 
     def _retention(self):
         try:
@@ -367,7 +374,7 @@ class SettingsSheet(Adw.Window):
 
     # ------------------------------------------------------------- advanced
     def _build_advanced(self):
-        self.body.append(ui.group_title('Avanzado'))
+        self.body.append(ui.group_title(_('Avanzado')))
         self.body.append(self._exclude_expander())
         self.body.append(self._ssh_expander())
         self.body.append(self._smart_expander())
@@ -386,7 +393,7 @@ class SettingsSheet(Adw.Window):
         return expander, box
 
     def _exclude_expander(self):
-        expander, box = self._expander('Excluir archivos o patrones')
+        expander, box = self._expander(_('Excluir archivos o patrones'))
         self.excludes_flow = Gtk.FlowBox()
         self.excludes_flow.set_selection_mode(Gtk.SelectionMode.NONE)
         self.excludes_flow.set_max_children_per_line(3)
@@ -396,11 +403,11 @@ class SettingsSheet(Adw.Window):
         self._fill_excludes()
 
         add_row = Gtk.Box(spacing=8)
-        entry = Gtk.Entry(placeholder_text='*/node_modules, *.tmp…',
+        entry = Gtk.Entry(placeholder_text=_('*/node_modules, *.tmp…'),
                           hexpand=True)
         entry.add_css_class('rw-entry')
         entry.add_css_class('rw-mono')
-        button = Gtk.Button(label='Añadir')
+        button = Gtk.Button(label=_('Añadir'))
         button.add_css_class('rw-soft')
 
         def add_pattern(*_):
@@ -432,7 +439,7 @@ class SettingsSheet(Adw.Window):
         except Exception:  # noqa: BLE001
             patterns = []
         if not patterns:
-            empty = Gtk.Label(label='Sin exclusiones', xalign=0)
+            empty = Gtk.Label(label=_('Sin exclusiones'), xalign=0)
             empty.add_css_class('rw-srow-sub')
             self.excludes_flow.insert(empty, -1)
             return
@@ -448,12 +455,12 @@ class SettingsSheet(Adw.Window):
         self._fill_excludes()
 
     def _ssh_expander(self):
-        expander, box = self._expander('Equipo remoto (SSH)')
+        expander, box = self._expander(_('Equipo remoto (SSH)'))
         fields = [
-            ('Servidor', self.cfg.sshHost, self.cfg.setSshHost),
-            ('Puerto', self.cfg.sshPort, self.cfg.setSshPort),
-            ('Usuario', self.cfg.sshUser, self.cfg.setSshUser),
-            ('Ruta remota', self.cfg.sshSnapshotsPath,
+            (_('Servidor'), self.cfg.sshHost, self.cfg.setSshHost),
+            (_('Puerto'), self.cfg.sshPort, self.cfg.setSshPort),
+            (_('Usuario'), self.cfg.sshUser, self.cfg.setSshUser),
+            (_('Ruta remota'), self.cfg.sshSnapshotsPath,
              self.cfg.setSshSnapshotsPath),
         ]
         for title, getter, setter in fields:
@@ -466,13 +473,13 @@ class SettingsSheet(Adw.Window):
             except Exception:  # noqa: BLE001
                 pass
 
-            def apply(e, set_=setter, label=title, get=getter):
+            def apply(e, set_=setter, get=getter):
                 text = e.get_text().strip()
-                if label == 'Puerto':
+                if set_ is self.cfg.setSshPort:
                     if not text.isdigit() or not 1 <= int(text) <= 65535:
                         e.set_text(str(_safe(get) or '22'))
                         if self._error_label is not None:
-                            self._error_label.set_text('Puerto SSH no válido')
+                            self._error_label.set_text(_('Puerto SSH no válido'))
                         return
                 try:
                     set_(text)
@@ -488,18 +495,19 @@ class SettingsSheet(Adw.Window):
         return expander
 
     def _smart_expander(self):
-        expander, box = self._expander('Conservación inteligente')
+        expander, box = self._expander(_('Conservación inteligente'))
         state = self._smart()
         enabled, keep_all, per_day, per_week, per_month = state
         switch = Gtk.Switch(active=enabled, valign=Gtk.Align.CENTER)
-        box.append(ui.row('Activa', 'Una copia al día, otra a la semana…', switch))
+        box.append(ui.row(_('Activa'), _('Una copia al día, otra a la semana…'),
+                          switch))
 
         spins = {}
         for key, title, value, unit in (
-                ('all', 'Conservar todas durante', keep_all, 'días'),
-                ('day', 'Una al día durante', per_day, 'días'),
-                ('week', 'Una a la semana durante', per_week, 'semanas'),
-                ('month', 'Una al mes durante', per_month, 'meses')):
+                ('all', _('Conservar todas durante'), keep_all, _('días')),
+                ('day', _('Una al día durante'), per_day, _('días')),
+                ('week', _('Una a la semana durante'), per_week, _('semanas')),
+                ('month', _('Una al mes durante'), per_month, _('meses'))):
             spin = Gtk.SpinButton(adjustment=Gtk.Adjustment(
                 value=value, lower=0, upper=3650, step_increment=1),
                 valign=Gtk.Align.CENTER, width_chars=5)
@@ -530,14 +538,15 @@ class SettingsSheet(Adw.Window):
             return (False, 2, 7, 4, 24)
 
     def _rsync_expander(self):
-        expander, box = self._expander('rsync y registro')
+        expander, box = self._expander(_('rsync y registro'))
         for title, subtitle, getter, setter in (
-                ('Sumas de comprobación',
-                 'Detecta cambios por contenido, no por fecha',
+                (_('Sumas de comprobación'),
+                 _('Detecta cambios por contenido, no por fecha'),
                  self.cfg.useChecksum, self.cfg.setUseChecksum),
-                ('Preservar ACL', 'Atributos de control de acceso',
+                (_('Preservar ACL'), _('Atributos de control de acceso'),
                  self.cfg.preserveAcl, self.cfg.setPreserveAcl),
-                ('Preservar atributos extendidos', 'xattrs del sistema de archivos',
+                (_('Preservar atributos extendidos'),
+                 _('xattrs del sistema de archivos'),
                  self.cfg.preserveXattr, self.cfg.setPreserveXattr)):
             switch = Gtk.Switch(active=self._get(getter, False),
                                 valign=Gtk.Align.CENTER)
@@ -550,9 +559,9 @@ class SettingsSheet(Adw.Window):
             level = int(self.cfg.logLevel())
         except Exception:  # noqa: BLE001
             pass
-        control = ui.segmented([(1, 'Solo errores'), (2, 'Cambios'),
-                                (3, 'Todo')], level, self._set_log_level)
-        box.append(ui.row('Nivel de registro', 'Detalle del takesnapshot.log',
+        control = ui.segmented([(1, _('Solo errores')), (2, _('Cambios')),
+                                (3, _('Todo'))], level, self._set_log_level)
+        box.append(ui.row(_('Nivel de registro'), _('Detalle del takesnapshot.log'),
                           control))
         return expander
 
@@ -564,7 +573,7 @@ class SettingsSheet(Adw.Window):
             pass
 
     def _profiles_expander(self):
-        expander, box = self._expander('Perfiles')
+        expander, box = self._expander(_('Perfiles'))
         current = self.backend.current_profile()
         for pid, name in self.backend.profiles():
             btn = Gtk.ToggleButton(label=name)
@@ -572,7 +581,7 @@ class SettingsSheet(Adw.Window):
             btn.set_active(pid == current)
             btn.connect('clicked', self._on_profile_chosen, pid)
             box.append(btn)
-        manage = Gtk.Button(label='Gestionar perfiles…')
+        manage = Gtk.Button(label=_('Gestionar perfiles…'))
         manage.add_css_class('rw-soft')
         manage.set_halign(Gtk.Align.START)
         manage.connect('clicked', lambda *_: (

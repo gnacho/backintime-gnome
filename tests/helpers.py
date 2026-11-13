@@ -2,7 +2,11 @@
 import os
 import tempfile
 
-import gi
+# The assertions below are written against the source language, so the suite
+# pins it instead of depending on the locale the machine happens to use.
+os.environ['BACKINTIME_GNOME_LANG'] = 'es'
+
+import gi  # noqa: E402
 
 gi.require_version('Adw', '1')
 from gi.repository import Adw

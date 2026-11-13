@@ -1,0 +1,2350 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the backintime-gnome package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: backintime-gnome 0.3.10\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-13 18:09+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: bitgnome/app.py
+msgid "Equipo de Back In Time · front GNOME"
+msgstr ""
+
+#: bitgnome/app.py
+msgid "Interfaz GTK4 + libadwaita sobre el núcleo de Back In Time."
+msgstr ""
+
+#: bitgnome/app.py bitgnome/prefs.py
+msgid "General"
+msgstr ""
+
+#: bitgnome/app.py bitgnome/window.py
+msgid "Tomar instantánea"
+msgstr ""
+
+#: bitgnome/app.py bitgnome/dialogs.py bitgnome/window.py
+msgid "Restaurar"
+msgstr ""
+
+#: bitgnome/app.py bitgnome/settings_sheet.py bitgnome/window.py
+msgid "Ajustes"
+msgstr ""
+
+#: bitgnome/app.py
+msgid "Punto anterior"
+msgstr ""
+
+#: bitgnome/app.py
+msgid "Punto siguiente"
+msgstr ""
+
+#: bitgnome/app.py bitgnome/window.py
+msgid "Volver al presente"
+msgstr ""
+
+#: bitgnome/app.py
+msgid "Salir"
+msgstr ""
+
+#: bitgnome/backend.py
+msgid "No se encontró el núcleo de Back In Time (common/)."
+msgstr ""
+
+#: bitgnome/backend.py
+#, python-brace-format
+msgid "Error importando el núcleo de Back In Time: {error}"
+msgstr ""
+
+#: bitgnome/backend.py
+msgid "Local cifrado (encfs)"
+msgstr ""
+
+#: bitgnome/backend.py
+msgid "SSH cifrado (encfs)"
+msgstr ""
+
+#: bitgnome/backend.py
+msgid "Local cifrado (gocryptfs)"
+msgstr ""
+
+#: bitgnome/backend.py
+msgid "SSH cifrado (gocryptfs)"
+msgstr ""
+
+#: bitgnome/backend.py
+#, python-brace-format
+msgid "Config no válida (exit {code})"
+msgstr ""
+
+#: bitgnome/backend.py bitgnome/window.py
+msgid "Núcleo no disponible"
+msgstr ""
+
+#: bitgnome/backend.py
+msgid "El alta guiada solo está disponible para perfiles locales"
+msgstr ""
+
+#: bitgnome/backend.py
+msgid ""
+"No cambies el destino de un perfil cifrado desde aquí. Crea un perfil nuevo "
+"para conservar las copias anteriores."
+msgstr ""
+
+#: bitgnome/backend.py
+msgid ""
+"El perfil actual ya tiene copias. Crea un perfil nuevo para no ocultar las "
+"instantáneas sin cifrar."
+msgstr ""
+
+#: bitgnome/backend.py bitgnome/encryption.py
+msgid "Elige una carpeta nueva o vacía, o un destino Gocryptfs ya inicializado"
+msgstr ""
+
+#: bitgnome/backend.py
+msgid "Gocryptfs no está instalado"
+msgstr ""
+
+#: bitgnome/backend.py bitgnome/encryption.py bitgnome/wizard.py
+msgid "Escribe una contraseña para el cifrado"
+msgstr ""
+
+#: bitgnome/backend.py
+msgid "Destino no válido"
+msgstr ""
+
+#: bitgnome/backend.py
+msgid "Escribe el servidor SSH"
+msgstr ""
+
+#: bitgnome/backend.py
+msgid "Escribe la ruta remota de las copias"
+msgstr ""
+
+#: bitgnome/backend.py
+msgid "Falta sshfs en este equipo: instálalo para usar destinos SSH"
+msgstr ""
+
+#: bitgnome/backend.py
+#, python-brace-format
+msgid "El servidor {target} no responde en 25 segundos"
+msgstr ""
+
+#: bitgnome/backend.py
+#, python-brace-format
+msgid "No se pudo lanzar ssh: {error}"
+msgstr ""
+
+#: bitgnome/backend.py
+#, python-brace-format
+msgid ""
+"La llave SSH no ha sido aceptada por {target}. Añádela al usuario remoto."
+msgstr ""
+
+#: bitgnome/backend.py
+#, python-brace-format
+msgid "No se puede resolver el nombre {host}"
+msgstr ""
+
+#: bitgnome/backend.py
+#, python-brace-format
+msgid "No se puede conectar a {target} en el puerto {port}"
+msgstr ""
+
+#: bitgnome/backend.py
+#, python-brace-format
+msgid "La comprobación falló: {detail}"
+msgstr ""
+
+#: bitgnome/backend.py
+#, python-brace-format
+msgid "La ruta {path} existe pero no se puede escribir"
+msgstr ""
+
+#: bitgnome/backend.py
+#, python-brace-format
+msgid "La carpeta padre de {path} no existe o no se puede escribir"
+msgstr ""
+
+#: bitgnome/backend.py
+msgid ""
+"El servidor no tiene rsync instalado y Back In Time lo necesita allí para "
+"copiar por SSH"
+msgstr ""
+
+#: bitgnome/backend.py
+#, python-brace-format
+msgid " · {size} libres"
+msgstr ""
+
+#: bitgnome/backend.py
+#, python-brace-format
+msgid "{path} (se creará)"
+msgstr ""
+
+#: bitgnome/backend.py
+#, python-brace-format
+msgid "Conexión correcta con {target} · {rsync}{space} en {where}"
+msgstr ""
+
+#: bitgnome/backend.py
+msgid ""
+"El perfil cifrado necesita su contraseña: desbloquéalo para poder leer las "
+"copias."
+msgstr ""
+
+#: bitgnome/backend.py
+#, python-brace-format
+msgid "La copia se creó, pero el motor falló al terminar{detail}"
+msgstr ""
+
+#: bitgnome/backend.py
+#, python-brace-format
+msgid "La copia falló{detail}"
+msgstr ""
+
+#: bitgnome/dialogs.py
+#, python-brace-format
+msgid "Restaurar «{name}»"
+msgstr ""
+
+#: bitgnome/dialogs.py
+#, python-brace-format
+msgid "Desde la instantánea «{name}»"
+msgstr ""
+
+#: bitgnome/dialogs.py bitgnome/encryption.py bitgnome/wizard.py
+msgid "Destino"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Ubicación original"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Otra carpeta…"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "/ruta/destino"
+msgstr ""
+
+#: bitgnome/dialogs.py bitgnome/prefs.py
+msgid "Opciones"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Crear copia de los archivos existentes"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Renombra los actuales a archivo.backup.YYYYMMDD"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Restaurar solo archivos nuevos o más recientes"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Equivale a rsync --update"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Eliminar archivos que no están en la instantánea"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Peligroso: borra archivos posteriores a la copia"
+msgstr ""
+
+#: bitgnome/dialogs.py bitgnome/encryption.py bitgnome/window.py
+#: bitgnome/wizard.py
+msgid "Cancelar"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Elige una carpeta de destino"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Registro de instantáneas"
+msgstr ""
+
+#: bitgnome/dialogs.py bitgnome/settings_sheet.py
+msgid "Todo"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Info"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Avisos"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Errores"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "cargando…"
+msgstr ""
+
+#: bitgnome/dialogs.py
+#, python-brace-format
+msgid "No se pudo leer el registro: {error}"
+msgstr ""
+
+#: bitgnome/dialogs.py
+#, python-brace-format
+msgid "Cambios - {name}"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "El archivo es demasiado grande para el diff interno (más de 2 MB)."
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "No se puede leer el archivo en la instantánea."
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid ""
+"No hay una instantánea anterior con la que comparar: este es el punto más "
+"antiguo."
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "El archivo no existía en la instantánea anterior (es nuevo)."
+msgstr ""
+
+#: bitgnome/dialogs.py
+#, python-brace-format
+msgid "anterior ({sid})"
+msgstr ""
+
+#: bitgnome/dialogs.py
+#, python-brace-format
+msgid "actual ({sid})"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Sin diferencias con la instantánea anterior."
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Retención"
+msgstr ""
+
+#: bitgnome/dialogs.py
+#, python-brace-format
+msgid ""
+"La retención está configurada en {label}, una unidad que el motor no "
+"soporta: solo aplica días, semanas y años. No se borrará ninguna instantánea."
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid ""
+"Cambia la conservación a 2 semanas, 1 año o 2 años para que el borrado "
+"automático funcione."
+msgstr ""
+
+#: bitgnome/dialogs.py
+#, python-brace-format
+msgid ""
+"La retención está configurada en {label}, pero este núcleo de Back In Time "
+"no la aplica: removeOldSnapshotsDate() devuelve 1/1/1, así que no se borrará "
+"ninguna instantánea."
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid ""
+"No es un problema de esta aplicación: el motor instalado no ejecuta la "
+"retención. No hay archivos en riesgo por borrado automático."
+msgstr ""
+
+#: bitgnome/dialogs.py
+#, python-brace-format
+msgid ""
+"La retención está en {label}, pero ahora mismo no se puede leer el destino, "
+"así que no se puede saber qué instantáneas se borrarían ni qué archivos se "
+"perderían."
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid ""
+"Conecta el destino y vuelve a revisar la retención. Las instantáneas con "
+"nombre no se borran nunca."
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid ""
+"{count} instantáneas anteriores al {cutoff:%d/%m/%Y} (retención: {label}) se "
+"eliminarán en la próxima copia."
+msgstr ""
+
+#: bitgnome/dialogs.py
+#, python-brace-format
+msgid "<b>Solo existen ahí: {n} archivos</b>"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid ""
+"No se pudo leer todo el contenido (permisos o destino sin montar). No se "
+"puede asegurar qué se perdería."
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid ""
+"Hay más archivos de los que se pueden analizar de una vez. No se puede "
+"asegurar qué se perdería; lista incompleta."
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid ""
+"Si se borran esas instantáneas, estos archivos se pierden. No hay versión "
+"más reciente de ellos."
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid ""
+"Todos los archivos de esas instantáneas existen en alguna instantánea que se "
+"conserva."
+msgstr ""
+
+#: bitgnome/dialogs.py
+#, python-brace-format
+msgid "Con versión en una instantánea que se conserva: <b>{n}</b>"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Abrir ajustes"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Entendido"
+msgstr ""
+
+#: bitgnome/dialogs.py
+#, python-brace-format
+msgid ""
+"\n"
+"… y {n} más"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Desbloquear el perfil cifrado"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Este perfil guarda las copias cifradas"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Escribe la contraseña del perfil para leer las instantáneas."
+msgstr ""
+
+#: bitgnome/dialogs.py bitgnome/encryption.py bitgnome/wizard.py
+msgid "Contraseña"
+msgstr ""
+
+#: bitgnome/dialogs.py
+msgid "Desbloquear"
+msgstr ""
+
+#: bitgnome/encryption.py
+msgid ""
+"La carpeta de destino no admite escritura con tu usuario. Elige otra carpeta "
+"o revisa los permisos."
+msgstr ""
+
+#: bitgnome/encryption.py
+msgid ""
+"El disco de destino se ha desconectado o ha pasado a solo lectura durante la "
+"operación. Comprueba el cable y el puerto, vuelve a conectarlo y revisa el "
+"estado del disco (por ejemplo con `sudo smartctl -a` y un `fsck` de la "
+"partición) antes de reintentar."
+msgstr ""
+
+#: bitgnome/encryption.py
+msgid "Error desconocido del motor"
+msgstr ""
+
+#: bitgnome/encryption.py
+msgid "Cifrar copia"
+msgstr ""
+
+#: bitgnome/encryption.py
+msgid "Protege tus copias con una contraseña"
+msgstr ""
+
+#: bitgnome/encryption.py
+msgid "Elegir destino…"
+msgstr ""
+
+#: bitgnome/encryption.py
+msgid "Destino cifrado actual"
+msgstr ""
+
+#: bitgnome/encryption.py
+msgid "Usa una carpeta nueva o vacía"
+msgstr ""
+
+#: bitgnome/encryption.py
+msgid "Contraseña (vacía para conservar la actual)"
+msgstr ""
+
+#: bitgnome/encryption.py bitgnome/wizard.py
+msgid "Contraseña del cifrado"
+msgstr ""
+
+#: bitgnome/encryption.py bitgnome/wizard.py
+msgid "Confirmar contraseña"
+msgstr ""
+
+#: bitgnome/encryption.py bitgnome/wizard.py
+msgid "Confirmar contraseña del cifrado"
+msgstr ""
+
+#: bitgnome/encryption.py bitgnome/wizard.py
+msgid ""
+"Guarda la contraseña en un lugar seguro: sin ella no podrás restaurar tus "
+"copias."
+msgstr ""
+
+#: bitgnome/encryption.py
+msgid "Activar cifrado"
+msgstr ""
+
+#: bitgnome/encryption.py
+msgid "Elegir destino cifrado"
+msgstr ""
+
+#: bitgnome/encryption.py bitgnome/wizard.py
+msgid "Las contraseñas no coinciden"
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/window.py
+msgid "Gestionar perfiles"
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/settings_sheet.py bitgnome/window.py
+msgid "Núcleo de Back In Time no disponible"
+msgstr ""
+
+#: bitgnome/prefs.py
+#, python-brace-format
+msgid "No se pudo leer la configuración: {error}"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Comprobando…"
+msgstr ""
+
+#: bitgnome/prefs.py
+#, python-brace-format
+msgid "La comprobación falló: {error}"
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/wizard.py
+msgid "Todo listo"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Hay un problema"
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/settings_sheet.py bitgnome/wizard.py
+msgid "No se pudo guardar la configuración"
+msgstr ""
+
+#: bitgnome/prefs.py
+#, python-brace-format
+msgid "El cambio se ve en pantalla pero no se ha guardado: {error}"
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/window.py bitgnome/wizard.py
+msgid "Cerrar"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Modo"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Modo de instantáneas"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Dónde se guardan las copias"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Guardar instantáneas en"
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/settings_sheet.py
+msgid "Cambiar…"
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/settings_sheet.py
+msgid "Servidor"
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/settings_sheet.py
+msgid "Puerto"
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/settings_sheet.py
+msgid "Usuario"
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/settings_sheet.py
+msgid "Ruta remota"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Clave privada"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Probar la conexión"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Comprueba ssh, la ruta remota y que allí haya rsync"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Probar"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Programación"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Programar instantáneas"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Entrada de cron gestionada por Back In Time"
+msgstr ""
+
+#: bitgnome/prefs.py
+#, python-brace-format
+msgid "Cifrado {kind}"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid ""
+"Este modo necesita un flujo guiado que todavía no está disponible. Usa "
+"Gestionar perfiles con un perfil existente o crea uno nuevo antes de cambiar "
+"el modo."
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/settings_sheet.py
+msgid "Elegir carpeta de destino"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Incluir"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Carpetas y archivos a respaldar"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "rsync enlaza los archivos sin cambios: no ocupan espacio extra."
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Añadir…"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Carpeta…"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Archivo…"
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/window.py
+msgid "carpeta"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "archivo"
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/settings_sheet.py bitgnome/wizard.py
+msgid "Añadir a la copia"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Excluir"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Patrones de exclusión"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Comodines de rsync: * dentro de un nivel, ** a cualquier profundidad."
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Nuevo patrón o ruta…"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Por tamaño"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Excluir archivos mayores de"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Autoeliminar"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Antigüedad"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Eliminar instantáneas más antiguas de"
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/retention.py bitgnome/settings_sheet.py
+msgid "días"
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/retention.py bitgnome/settings_sheet.py
+msgid "semanas"
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/retention.py bitgnome/settings_sheet.py
+msgid "años"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Eliminación inteligente"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Tras cada instantánea se aplica este patrón de conservación."
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Conservar solo lo que indica el patrón"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Conservar todas durante (días)"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Conservar una al día durante (días)"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Conservar una a la semana durante (semanas)"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Conservar una al mes durante (meses)"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Notificaciones"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Notificar errores y avisos"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Rendimiento"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Ejecutar cron con nice -n19"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Menor prioridad de CPU"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Ejecutar cron con ionice -c2 -n7"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Menor prioridad de E/S"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Restauración y archivos"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Copia de seguridad antes de restaurar"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Continuar aunque haya errores"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Conserva instantáneas incompletas"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Usar sumas de comprobación"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Más lento, pero más fiable que fecha+tamaño"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Copiar enlaces simbólicos como archivos"
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/settings_sheet.py
+msgid "Preservar ACL"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Preservar atributos extendidos (xattr)"
+msgstr ""
+
+#: bitgnome/prefs.py bitgnome/settings_sheet.py
+msgid "Avanzado"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Modo rsync completo"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Una sola pasada; más fiel pero más lento"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Sumas de comprobación en rsync completo"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Comprobar comandos en el remoto"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Comprobar que el remoto está en línea (ping)"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Guardar contraseña en el llavero"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Usar caché de contraseña"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Registro y cron"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Redirigir stdout a /dev/null en cron"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "Redirigir stderr a /dev/null en cron"
+msgstr ""
+
+#: bitgnome/prefs.py
+msgid "No copiar con batería"
+msgstr ""
+
+#: bitgnome/retention.py bitgnome/window.py
+#, python-brace-format
+msgid "{n} semana"
+msgid_plural "{n} semanas"
+msgstr[0] ""
+msgstr[1] ""
+
+#: bitgnome/retention.py bitgnome/window.py
+#, python-brace-format
+msgid "{n} año"
+msgid_plural "{n} años"
+msgstr[0] ""
+msgstr[1] ""
+
+#: bitgnome/retention.py bitgnome/window.py
+#, python-brace-format
+msgid "{n} mes"
+msgid_plural "{n} meses"
+msgstr[0] ""
+msgstr[1] ""
+
+#: bitgnome/retention.py bitgnome/window.py
+#, python-brace-format
+msgid "{n} hora"
+msgid_plural "{n} horas"
+msgstr[0] ""
+msgstr[1] ""
+
+#: bitgnome/retention.py bitgnome/window.py
+#, python-brace-format
+msgid "{n} día"
+msgid_plural "{n} días"
+msgstr[0] ""
+msgstr[1] ""
+
+#: bitgnome/settings_sheet.py
+msgid "Manual"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Al arrancar"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Cada 5 minutos"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Cada 10 minutos"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Cada 30 minutos"
+msgstr ""
+
+#: bitgnome/settings_sheet.py bitgnome/wizard.py
+msgid "Cada hora"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Cada 2 horas"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Cada 4 horas"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Cada 6 horas"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Cada 12 horas"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Horas personalizadas"
+msgstr ""
+
+#: bitgnome/settings_sheet.py bitgnome/wizard.py
+msgid "Cada día"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Repetidamente (anacron)"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Al conectar la unidad"
+msgstr ""
+
+#: bitgnome/settings_sheet.py bitgnome/wizard.py
+msgid "Cada semana"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Cada mes"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Cada año"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "horas"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "meses"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Cerrar ajustes"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+#, python-brace-format
+msgid "{reason}: no se ha cambiado nada"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Qué se copia"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "+ Añadir carpeta"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Cada cuánto"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Cuándo crear puntos de restauración"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+#, python-brace-format
+msgid "Ahora: {mode}"
+msgstr ""
+
+#: bitgnome/settings_sheet.py bitgnome/wizard.py
+msgid "Frecuencia"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Estado"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Comprobando el servicio de cron…"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Avisar si una copia falla"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Notificaciones del escritorio"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "No se pudo comprobar el estado de cron"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Al conectar la unidad no está disponible"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "No depende de cron"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "No hay cron instalado: no se ejecutará"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Cron instalado pero su servicio está parado"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Listo: cron está activo"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Dónde"
+msgstr ""
+
+#: bitgnome/settings_sheet.py bitgnome/wizard.py
+msgid "sin configurar"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+#, python-brace-format
+msgid "Perfil en modo {mode}: la ruta se edita en Gestionar perfiles"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+#, python-brace-format
+msgid "Destino ({mode})"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+#, python-brace-format
+msgid "Cifrado activo ({backend})"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Configurar cifrado…"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Protege el contenido de las copias"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Cifrar copia…"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "EncFS legado"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+#, python-brace-format
+msgid "Cifrado {kind}; usa Gestionar perfiles"
+msgstr ""
+
+#: bitgnome/settings_sheet.py bitgnome/wizard.py
+msgid "Cifrado"
+msgstr ""
+
+#: bitgnome/settings_sheet.py bitgnome/wizard.py
+msgid "Conservación"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "2 semanas"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "1 año"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "2 años"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Siempre"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Las más antiguas se eliminan solas para hacer hueco"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+#, python-brace-format
+msgid "Ahora: {count} {unit}"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "(el motor no borra con esta unidad)"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Conservar copias durante"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Excluir archivos o patrones"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "*/node_modules, *.tmp…"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Añadir"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Sin exclusiones"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Equipo remoto (SSH)"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Puerto SSH no válido"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Conservación inteligente"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Activa"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Una copia al día, otra a la semana…"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Conservar todas durante"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Una al día durante"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Una a la semana durante"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Una al mes durante"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "rsync y registro"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Sumas de comprobación"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Detecta cambios por contenido, no por fecha"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Atributos de control de acceso"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Preservar atributos extendidos"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "xattrs del sistema de archivos"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Solo errores"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Cambios"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Nivel de registro"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Detalle del takesnapshot.log"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Perfiles"
+msgstr ""
+
+#: bitgnome/settings_sheet.py
+msgid "Gestionar perfiles…"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "enero"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "febrero"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "marzo"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "abril"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "mayo"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "junio"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "julio"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "agosto"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "septiembre"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "octubre"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "noviembre"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "diciembre"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "lunes"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "martes"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "miércoles"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "jueves"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "viernes"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "sábado"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "domingo"
+msgstr ""
+
+#: bitgnome/ui.py
+#, python-brace-format
+msgid "{day} {number} de {month}"
+msgstr ""
+
+#: bitgnome/ui.py
+#, python-brace-format
+msgid "{number} {month}, {time}"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "hoy"
+msgstr ""
+
+#: bitgnome/ui.py
+msgid "ayer"
+msgstr ""
+
+#: bitgnome/ui.py
+#, python-brace-format
+msgid "hace {n} día"
+msgid_plural "hace {n} días"
+msgstr[0] ""
+msgstr[1] ""
+
+#: bitgnome/ui.py
+#, python-brace-format
+msgid "hace {n} semana"
+msgid_plural "hace {n} semanas"
+msgstr[0] ""
+msgstr[1] ""
+
+#: bitgnome/ui.py
+#, python-brace-format
+msgid "hace {n} mes"
+msgid_plural "hace {n} meses"
+msgstr[0] ""
+msgstr[1] ""
+
+#: bitgnome/ui.py
+#, python-brace-format
+msgid "hace {n} año"
+msgid_plural "hace {n} años"
+msgstr[0] ""
+msgstr[1] ""
+
+#: bitgnome/ui.py
+msgid "Quitar"
+msgstr ""
+
+#: bitgnome/ui.py
+#, python-brace-format
+msgid "Quitar {label}"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "No hay cron instalado"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "El servicio de cron no está corriendo"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "El crontab no se pudo actualizar"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "sin copias automáticas"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "cuando arranques el equipo"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "en menos de 5 minutos"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "en menos de 10 minutos"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "en menos de 30 minutos"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "en menos de una hora"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "en menos de 2 horas"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "en menos de 4 horas"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "en menos de 6 horas"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "en menos de 12 horas"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "a la hora configurada"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "cuando el equipo lleve un rato encendido"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "la semana que viene"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "el mes que viene"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "el año que viene"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "cuando conectes la unidad"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "la próxima, mañana a las {hour:02d}:{minute:02d}"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "la próxima, {text}"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "sin programación"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "No hay cron instalado: las copias automáticas no se ejecutarán"
+msgstr ""
+
+#: bitgnome/window.py
+msgid ""
+"El modo «al conectar la unidad» no está disponible en esta instalación: no "
+"hay servicio udev del núcleo."
+msgstr ""
+
+#: bitgnome/window.py
+msgid ""
+"El servicio de cron está parado: las copias automáticas no se ejecutarán"
+msgstr ""
+
+#: bitgnome/window.py
+msgid ""
+"Instala un gestor de cron y actívalo:\n"
+"\n"
+"    sudo pacman -S --needed cronie\n"
+"    sudo systemctl enable --now cronie.service\n"
+"\n"
+"Vuelve a abrir la ventana para que se escriba la entrada de las copias "
+"automáticas."
+msgstr ""
+
+#: bitgnome/window.py
+msgid ""
+"El paquete de cron está instalado pero su servicio no se está ejecutando:\n"
+"\n"
+"    sudo systemctl enable --now cronie.service\n"
+"\n"
+"En Debian y Ubuntu el paquete es cron y la unidad cron.service. Con fcron, "
+"fcron.service.\n"
+"\n"
+"Comprueba el estado con:\n"
+"\n"
+"    systemctl is-active cronie.service"
+msgstr ""
+
+#: bitgnome/window.py
+msgid ""
+"Las copias al conectar la unidad las programa el paquete Qt de Back In Time "
+"mediante un servicio udev por D-Bus, que no está instalado.\n"
+"\n"
+"Opciones:\n"
+"\n"
+"  - Cambia la programación a una basada en cron (cada hora, cada día o cada "
+"semana).\n"
+"  - Instala el paquete Qt del núcleo si quieres ese modo."
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Copias de seguridad"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Buscar en el tiempo…"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Buscar en el tiempo"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Crear copia ahora"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Tomar una instantánea ahora (Ctrl+S)"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Ajustes (Ctrl+,)"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Restaurar…"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Restaurar en otra ubicación…"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Registro de la instantánea"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Comparar con la anterior"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Eliminar esta instantánea"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Revisar retención"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Asistente de configuración"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Atajos de teclado"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Acerca de Back In Time"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Menú principal"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Cómo arreglarlo"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Cómo arreglar las copias automáticas"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Copias automáticas"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Tus carpetas protegidas"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Doble clic para entrar"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Cuadrícula"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Vista de cuadrícula"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Lista"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Vista de lista"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Nada por aquí"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Carpeta vacía en este momento"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Reproducir el paso del tiempo"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Ahora"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Estado actual de tus archivos"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Ver cambios"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Dejar de copiar"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "No se pudo montar el destino: {message}"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "No se pudo guardar la contraseña: {error}"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "No se pudo programar la copia: {reason}"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "No se pudo programar la copia automática"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Espera a que termine la operación para abrir el asistente"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Espera a que termine la operación en curso"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "{reason} para {what}"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Espera a que termine la operación para cambiar de perfil o destino"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Sin resultados"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "Nada llamado «{text}» en este punto."
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Búsqueda en todo el perfil"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "Resultados en todo el perfil ({count})"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Viajando en el tiempo"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Así se veían tus carpetas"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Lo que cambió después lleva etiqueta"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "Así estaba todo <b>{ago}</b> a las {time}"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "{day} · {time}"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "punto {index} de {total}"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Creando copia…"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "No se puede leer el destino"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Sin copias todavía"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Crea la primera copia para empezar a viajar en el tiempo."
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Última copia con errores"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "{count} puntos en el tiempo · revisa el registro"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Todo protegido"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid " · {count} con errores"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid ""
+"Última copia {last} · {next}\n"
+"{folders} carpetas vigiladas · {count} puntos en el tiempo{extra}"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "Destino · <b>{free} libres</b> ({pct}%)"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "Destino · <b>{name}</b>"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Destino · sin configurar"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "sin fecha"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "{ago} a las {time}"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Retención · <b>sin límite</b>"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "Retención · <b>{label}</b>"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Tus carpetas"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Carpeta no disponible"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "No existe o no hay permisos: {path}"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Prueba con otro nombre."
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Carpeta vacía en este momento."
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Se borró después"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Cambió después"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Restaurar esta versión"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "La retención ({label}) no se aplica: este núcleo no borra instantáneas"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Ver detalle"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid ""
+"{count} instantáneas fuera de retención; no se pudo analizar todo el "
+"contenido"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid ""
+"{count} instantáneas fuera de retención: {lost} archivos solo existen ahí"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Todavía no hay instantáneas"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "No hay instantáneas fuera de retención"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Ya hay una instantánea en curso"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "crear una copia"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Copiando…"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Tomando instantánea"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Iniciando rsync…"
+msgstr ""
+
+#: bitgnome/window.py bitgnome/wizard.py
+msgid "Parar la copia"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Seguir en segundo plano"
+msgstr ""
+
+#: bitgnome/window.py bitgnome/wizard.py
+msgid "Deteniendo la copia…"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "La copia sigue en segundo plano. Te aviso al terminar"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "No se pudo descartar la copia parcial: {error}"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Copia detenida. No se guardó nada"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "La copia terminó antes de poder detenerla"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "Error en la instantánea: {error}"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Punto en el tiempo creado"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Ver ahora"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Hay una copia en curso"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Si sales ahora, la copia se quedará a medias."
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Esperar"
+msgstr ""
+
+#: bitgnome/window.py bitgnome/wizard.py
+msgid "Detener y salir"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "La está ejecutando el asistente. Si sales ahora se quedará a medias."
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Deteniendo la copia y saliendo…"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Hay una operación en curso"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "Se está ejecutando una {operation}. Si sales ahora se quedará a medias."
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Se cerrará al terminar la copia"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "restaurar"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Viaja a un punto en el tiempo para restaurar"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Selecciona un archivo o carpeta"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Restauración iniciada…"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "restauración"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "Error al restaurar: {error}"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Restaurado"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Ver registro"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "No se pudo guardar el cambio"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "No se pudo quitar la carpeta: {error}"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "«{name}» ya no se copiará"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Deshacer"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "«{name}» ya estaba excluido"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "No se pudo guardar la exclusión"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "No se pudo excluir: {error}"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "«{name}» dejará de copiarse"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Vuelve a estar protegida"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Sigue protegido"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "borrar una instantánea"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Elige un punto en el tiempo primero"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "¿Eliminar este punto en el tiempo?"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid ""
+"Se eliminará permanentemente la instantánea del {label}. Esta acción no se "
+"puede deshacer."
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Eliminar"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "eliminación"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "Error al eliminar: {error}"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Punto en el tiempo eliminado"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "«Ahora» no tiene con qué comparar: elige un punto"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "Selecciona un archivo para comparar"
+msgstr ""
+
+#: bitgnome/window.py
+msgid "La comparación funciona con archivos, no carpetas"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid "No se pudo reproducir el historial: {error}"
+msgstr ""
+
+#: bitgnome/window.py
+#, python-brace-format
+msgid ""
+"{error}\n"
+"\n"
+"Instala el paquete backintime (o backintime-common) o define "
+"BACKINTIME_COMMON apuntando a la carpeta common/ del código fuente."
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Para trabajo intenso"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "El equilibrio perfecto"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Si cambian poco"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Solo cuando yo diga"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Control total"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Primera copia"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Bienvenida a Rewind"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Tu pasado, siempre a mano"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid ""
+"Copias automáticas de tus carpetas importantes. Recupera cualquier archivo "
+"tal como estaba ayer, la semana pasada o el año pasado. Sin nubes raras: tus "
+"discos, tus reglas."
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Paso 1 de 3"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "¿Qué quieres proteger?"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid ""
+"Elige las carpetas que no querrías perder jamás. Puedes cambiarlo cuando "
+"quieras."
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "No se han encontrado carpetas estándar. Usa «Elegir otra carpeta…»."
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Elegir otra carpeta…"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid " y más"
+msgstr ""
+
+#: bitgnome/wizard.py
+#, python-brace-format
+msgid "Se mantienen además: {names}{more}"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Paso 2 de 3"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "¿Cada cuánto hacemos copia?"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid ""
+"Rewind trabaja solo en segundo plano. Cada punto en el tiempo ocupa poco: lo "
+"que no cambió no se duplica."
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Paso 3 de 3"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "¿Dónde lo guardamos?"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid ""
+"Un disco externo es la opción más segura. También vale otro equipo de tu red "
+"(se configura en Ajustes)."
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Elegir carpeta o disco…"
+msgstr ""
+
+#: bitgnome/wizard.py
+#, python-brace-format
+msgid "Destino actual: {folder}"
+msgstr ""
+
+#: bitgnome/wizard.py
+#, python-brace-format
+msgid "Este perfil usa el modo {mode}: el destino se cambia en Ajustes."
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Cifrar la copia"
+msgstr ""
+
+#: bitgnome/wizard.py
+#, python-brace-format
+msgid "Cifrado con {engine}"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Carpeta de destino"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Esto es lo que haré"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Carpetas"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "ninguna"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "2 años (limpieza automática)"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Ahora no"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Salir sin configurar nada"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Atrás"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Empezar"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Continuar"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Crear mi primera copia"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Elige al menos una carpeta"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Elige un destino para las copias"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Elige una carpeta nueva o vacía para cifrar"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Preparando el cifrado…"
+msgstr ""
+
+#: bitgnome/wizard.py
+#, python-brace-format
+msgid "No se pudo guardar: {error}"
+msgstr ""
+
+#: bitgnome/wizard.py
+#, python-brace-format
+msgid "No se pudo preparar el cifrado: {error}"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "sin detalle"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Trabajando"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Primera copia en marcha"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Los archivos que no cambian no se duplican: solo se enlazan."
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Preparando…"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Ya hay otra copia en curso. Espera a que termine."
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Copia detenida. No se guardó nada."
+msgstr ""
+
+#: bitgnome/wizard.py
+#, python-brace-format
+msgid "La primera copia falló: {detail}"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Primera copia terminada"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Reintentar"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "La primera copia sigue en marcha"
+msgstr ""
+
+#: bitgnome/wizard.py
+msgid "Si cierras ahora, la copia se quedará a medias."
+msgstr ""

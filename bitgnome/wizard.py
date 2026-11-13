@@ -18,12 +18,13 @@ from . import backend as _backend  # noqa: E402
 from . import ui  # noqa: E402
 from .backend import Worker  # noqa: E402
 from .encryption import destination_is_empty_or_initialized  # noqa: E402
+from bitgnome.i18n import _  # noqa: E402
 
 SCHEDULE_CHOICES = [
-    ('hour', 'Cada hora', 'Para trabajo intenso'),
-    ('day', 'Cada día', 'El equilibrio perfecto'),
-    ('week', 'Cada semana', 'Si cambian poco'),
-    ('none', 'Solo cuando yo diga', 'Control total'),
+    ('hour', _('Cada hora'), _('Para trabajo intenso')),
+    ('day', _('Cada día'), _('El equilibrio perfecto')),
+    ('week', _('Cada semana'), _('Si cambian poco')),
+    ('none', _('Solo cuando yo diga'), _('Control total')),
 ]
 SCHEDULE_NAMES = {'HOUR': 'hour', 'DAY': 'day', 'WEEK': 'week',
                   'DISABLED': 'none'}
@@ -66,7 +67,7 @@ def candidate_dirs():
 class FirstRunWizard(Adw.Window):
     def __init__(self, app, on_done=None):
         super().__init__(transient_for=app.get_active_window(), modal=True,
-                         title='Primera copia', default_width=760,
+                         title=_('Primera copia'), default_width=760,
                          default_height=640)
         self.app = app
         self.backend = app.backend
@@ -166,15 +167,16 @@ class FirstRunWizard(Adw.Window):
             self.card.append(sub)
 
     def _step_welcome(self):
-        self._title('Bienvenida a Rewind', 'Tu pasado, siempre a mano',
-                    'Copias automáticas de tus carpetas importantes. Recupera '
-                    'cualquier archivo tal como estaba ayer, la semana pasada '
-                    'o el año pasado. Sin nubes raras: tus discos, tus reglas.')
+        self._title(_('Bienvenida a Rewind'), _('Tu pasado, siempre a mano'),
+                    _('Copias automáticas de tus carpetas importantes. '
+                      'Recupera cualquier archivo tal como estaba ayer, la '
+                      'semana pasada o el año pasado. Sin nubes raras: tus '
+                      'discos, tus reglas.'))
 
     def _step_folders(self):
-        self._title('Paso 1 de 3', '¿Qué quieres proteger?',
-                    'Elige las carpetas que no querrías perder jamás. Puedes '
-                    'cambiarlo cuando quieras.')
+        self._title(_('Paso 1 de 3'), _('¿Qué quieres proteger?'),
+                    _('Elige las carpetas que no querrías perder jamás. '
+                      'Puedes cambiarlo cuando quieras.'))
         flow = Gtk.FlowBox()
         flow.set_selection_mode(Gtk.SelectionMode.NONE)
         flow.set_max_children_per_line(3)
@@ -193,11 +195,12 @@ class FirstRunWizard(Adw.Window):
 
         self.card.append(flow)
         if not options:
-            hint = Gtk.Label(label='No se han encontrado carpetas estándar. '
-                             'Usa «Elegir otra carpeta…».', xalign=0, wrap=True)
+            hint = Gtk.Label(label=_('No se han encontrado carpetas '
+                                     'estándar. Usa «Elegir otra carpeta…».'),
+                             xalign=0, wrap=True)
             hint.add_css_class('rw-wiz-sub')
             self.card.append(hint)
-        add = Gtk.Button(label='Elegir otra carpeta…')
+        add = Gtk.Button(label=_('Elegir otra carpeta…'))
         add.add_css_class('rw-soft')
         add.set_halign(Gtk.Align.START)
         add.connect('clicked', self._choose_folder)
@@ -206,9 +209,10 @@ class FirstRunWizard(Adw.Window):
         if self.preserved:
             names = ', '.join(os.path.basename(p.rstrip('/')) or p
                               for p, _t in self.preserved[:4])
-            more = '' if len(self.preserved) <= 4 else ' y más'
-            note = Gtk.Label(label=f'Se mantienen además: {names}{more}',
-                             xalign=0, wrap=True)
+            more = '' if len(self.preserved) <= 4 else _(' y más')
+            note = Gtk.Label(
+                label=_('Se mantienen además: {names}{more}').format(
+                    names=names, more=more), xalign=0, wrap=True)
             note.add_css_class('rw-wiz-sub')
             self.card.append(note)
 
@@ -243,13 +247,13 @@ class FirstRunWizard(Adw.Window):
             self.folders.add(path)
             self._render()
 
-        ui.choose_folder(self, 'Añadir a la copia', on_path)
+        ui.choose_folder(self, _('Añadir a la copia'), on_path)
 
     def _step_frequency(self):
         self._preselect_frequency()
-        self._title('Paso 2 de 3', '¿Cada cuánto hacemos copia?',
-                    'Rewind trabaja solo en segundo plano. Cada punto en el '
-                    'tiempo ocupa poco: lo que no cambió no se duplica.')
+        self._title(_('Paso 2 de 3'), _('¿Cada cuánto hacemos copia?'),
+                    _('Rewind trabaja solo en segundo plano. Cada punto en el '
+                      'tiempo ocupa poco: lo que no cambió no se duplica.'))
         flow = Gtk.FlowBox()
         flow.set_selection_mode(Gtk.SelectionMode.NONE)
         flow.set_max_children_per_line(2)
@@ -288,11 +292,12 @@ class FirstRunWizard(Adw.Window):
         return 'local' in self.backend.profile_mode()
 
     def _step_destination(self):
-        self._title('Paso 3 de 3', '¿Dónde lo guardamos?',
-                    'Un disco externo es la opción más segura. También vale '
-                    'otro equipo de tu red (se configura en Ajustes).')
+        self._title(_('Paso 3 de 3'), _('¿Dónde lo guardamos?'),
+                    _('Un disco externo es la opción más segura. También vale '
+                      'otro equipo de tu red (se configura en Ajustes).'))
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        btn = Gtk.Button(label=self.destination or 'Elegir carpeta o disco…')
+        btn = Gtk.Button(
+            label=self.destination or _('Elegir carpeta o disco…'))
         btn.add_css_class('rw-choice')
         btn.set_halign(Gtk.Align.FILL)
         btn.set_sensitive(self._destination_editable())
@@ -301,37 +306,39 @@ class FirstRunWizard(Adw.Window):
         note = Gtk.Label(xalign=0, wrap=True)
         note.add_css_class('rw-wiz-sub')
         if self._destination_editable():
-            note.set_text('Destino actual: ' + (self.destination or
-                                                'sin configurar'))
+            note.set_text(_('Destino actual: {folder}').format(
+                folder=self.destination or _('sin configurar')))
         else:
-            note.set_text('Este perfil usa el modo '
-                          f'{self.backend.profile_mode()}: el destino se '
-                          'cambia en Ajustes.')
+            note.set_text(
+                _('Este perfil usa el modo {mode}: el destino se cambia en '
+                  'Ajustes.').format(mode=self.backend.profile_mode()))
         self.destination_note = note
         box.append(note)
         if self.backend.profile_mode() in ('local', 'local_gocryptfs'):
-            encrypt = Gtk.CheckButton(label='Cifrar la copia')
+            encrypt = Gtk.CheckButton(label=_('Cifrar la copia'))
             encrypt.set_active(self.encrypt)
             encrypt.connect('toggled', self._on_encrypt_toggled)
             box.append(encrypt)
         if self.encrypt:
             backend = 'EncFS' if _backend.supports_encfs() else 'Gocryptfs'
-            detail = Gtk.Label(label=f'Cifrado con {backend}', xalign=0)
+            detail = Gtk.Label(label=_('Cifrado con {engine}').format(
+                engine=backend), xalign=0)
             detail.add_css_class('rw-wiz-sub')
             box.append(detail)
-            box.append(Gtk.Label(label='Contraseña', xalign=0))
+            box.append(Gtk.Label(label=_('Contraseña'), xalign=0))
             self.password_entry = Gtk.PasswordEntry()
             self.password_entry.set_text(self.password)
-            ui.a11y(self.password_entry, 'Contraseña del cifrado')
+            ui.a11y(self.password_entry, _('Contraseña del cifrado'))
             box.append(self.password_entry)
-            box.append(Gtk.Label(label='Confirmar contraseña', xalign=0))
+            box.append(Gtk.Label(label=_('Confirmar contraseña'), xalign=0))
             self.password_confirm = Gtk.PasswordEntry()
             self.password_confirm.set_text(self.password_confirm_value)
-            ui.a11y(self.password_confirm, 'Confirmar contraseña del cifrado')
+            ui.a11y(self.password_confirm,
+                    _('Confirmar contraseña del cifrado'))
             box.append(self.password_confirm)
             warning = Gtk.Label(
-                label='Guarda la contraseña en un lugar seguro: sin ella no '
-                      'podrás restaurar tus copias.', xalign=0, wrap=True)
+                label=_('Guarda la contraseña en un lugar seguro: sin ella no '
+                        'podrás restaurar tus copias.'), xalign=0, wrap=True)
             warning.add_css_class('rw-wiz-sub')
             box.append(warning)
         self.card.append(box)
@@ -340,23 +347,24 @@ class FirstRunWizard(Adw.Window):
         def on_path(path):
             self.destination = path
             btn.set_label(path)
-            self.destination_note.set_text('Destino actual: ' + path)
+            self.destination_note.set_text(
+                _('Destino actual: {folder}').format(folder=path))
 
-        ui.choose_folder(self, 'Carpeta de destino', on_path)
+        ui.choose_folder(self, _('Carpeta de destino'), on_path)
 
     def _step_summary(self):
-        self._title('Todo listo', 'Esto es lo que haré')
+        self._title(_('Todo listo'), _('Esto es lo que haré'))
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         freq = {key: title for key, title, _sub in SCHEDULE_CHOICES}
         folders = ' · '.join(os.path.basename(p.rstrip('/')) or p
                              for p in sorted(self.folders))
-        rows = [('Carpetas', folders or 'ninguna'),
-                ('Frecuencia', freq.get(self.frequency, '')),
-                ('Destino', self.destination or 'sin configurar')]
+        rows = [(_('Carpetas'), folders or _('ninguna')),
+                (_('Frecuencia'), freq.get(self.frequency, '')),
+                (_('Destino'), self.destination or _('sin configurar'))]
         if self.encrypt:
             backend = 'EncFS' if _backend.supports_encfs() else 'Gocryptfs'
-            rows.append(('Cifrado', backend))
-        rows.append(('Conservación', '2 años (limpieza automática)'))
+            rows.append((_('Cifrado'), backend))
+        rows.append((_('Conservación'), _('2 años (limpieza automática)')))
         for title, value in rows:
             box.append(ui.row(title, value))
         self.card.append(box)
@@ -368,14 +376,14 @@ class FirstRunWizard(Adw.Window):
         # Leaving is always possible: the window manager close button already
         # works on every page, and this makes it visible and consistent.
         # Nothing is written until _apply(), so dismissing saves nothing.
-        skip = Gtk.Button(label='Ahora no')
+        skip = Gtk.Button(label=_('Ahora no'))
         skip.add_css_class('rw-soft')
-        skip.set_tooltip_text('Salir sin configurar nada')
-        ui.a11y(skip, 'Salir sin configurar nada')
+        skip.set_tooltip_text(_('Salir sin configurar nada'))
+        ui.a11y(skip, _('Salir sin configurar nada'))
         skip.connect('clicked', lambda *_: self.close())
         nav.append(skip)
 
-        back = Gtk.Button(label='Atrás')
+        back = Gtk.Button(label=_('Atrás'))
         back.add_css_class('rw-soft')
         back.set_visible(self.step > 0)
         back.connect('clicked', lambda *_: self._go(self.step - 1))
@@ -390,8 +398,8 @@ class FirstRunWizard(Adw.Window):
             dots.append(dot)
         nav.append(dots)
 
-        labels = ['Empezar', 'Continuar', 'Continuar', 'Continuar',
-                  'Crear mi primera copia']
+        labels = [_('Empezar'), _('Continuar'), _('Continuar'),
+                  _('Continuar'), _('Crear mi primera copia')]
         next_btn = Gtk.Button(label=labels[min(self.step, 4)])
         next_btn.add_css_class('rw-primary')
         next_btn.connect('clicked', lambda *_: self._go(self.step + 1))
@@ -412,27 +420,28 @@ class FirstRunWizard(Adw.Window):
     # -------------------------------------------------------------- finish
     def _apply(self):
         if not self.folders:
-            self._toast('Elige al menos una carpeta')
+            self._toast(_('Elige al menos una carpeta'))
             return False
         if self._destination_editable() and not self.destination:
-            self._toast('Elige un destino para las copias')
+            self._toast(_('Elige un destino para las copias'))
             return False
         if self.encrypt:
             if not destination_is_empty_or_initialized(self.destination):
-                self._toast('Elige una carpeta nueva o vacía para cifrar')
+                self._toast(
+                    _('Elige una carpeta nueva o vacía para cifrar'))
                 return False
             password = self.password_entry.get_text()
             if not password:
-                self._toast('Escribe una contraseña para el cifrado')
+                self._toast(_('Escribe una contraseña para el cifrado'))
                 return False
             if password != self.password_confirm.get_text():
-                self._toast('Las contraseñas no coinciden')
+                self._toast(_('Las contraseñas no coinciden'))
                 return False
         if self.encrypt:
             # gocryptfs -init plus a FUSE mount measured at 1.7 s: on the main
             # loop it froze the wizard with a modal dialog open.
             self._apply_password = self.password_entry.get_text()
-            self._toast('Preparando el cifrado…')
+            self._toast(_('Preparando el cifrado…'))
             Worker(self._apply_encrypted, self._apply_done)
             return True
         try:
@@ -452,11 +461,11 @@ class FirstRunWizard(Adw.Window):
             if self._destination_editable() and self.destination:
                 self.backend.set_destination_path(self.destination)
             if not ui.save(self.cfg):
-                self._toast('No se pudo guardar la configuración')
+                self._toast(_('No se pudo guardar la configuración'))
                 return False
             self._applied = True
         except Exception as exc:  # noqa: BLE001
-            self._toast(f'No se pudo guardar: {exc}')
+            self._toast(_('No se pudo guardar: {error}').format(error=exc))
             return False
         Worker(self.backend.apply_automation, lambda *_: None)
         return True
@@ -485,8 +494,8 @@ class FirstRunWizard(Adw.Window):
 
     def _apply_done(self, result, error):
         if error or not result:
-            self._toast(f'No se pudo preparar el cifrado: '
-                        f'{error or "sin detalle"}')
+            self._toast(_('No se pudo preparar el cifrado: {error}').format(
+                error=error or _('sin detalle')))
             return False
         self._applied = True
         Worker(self.backend.apply_automation, lambda *_: None)
@@ -495,25 +504,27 @@ class FirstRunWizard(Adw.Window):
         return False
 
     def _step_progress(self):
-        self._title('Trabajando', 'Primera copia en marcha',
-                    'Los archivos que no cambian no se duplican: solo se '
-                    'enlazan.')
+        self._title(_('Trabajando'), _('Primera copia en marcha'),
+                    _('Los archivos que no cambian no se duplican: solo se '
+                      'enlazan.'))
         self.bar = Gtk.ProgressBar(show_text=False)
         self.bar.set_pulse_step(0.08)
         self.card.append(self.bar)
-        self.file_label = Gtk.Label(label='Preparando…', xalign=0, wrap=True)
+        self.file_label = Gtk.Label(label=_('Preparando…'), xalign=0,
+                                    wrap=True)
         self.file_label.add_css_class('rw-wiz-sub')
         self.card.append(self.file_label)
 
         buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END)
-        self.stop_btn = Gtk.Button(label='Parar la copia')
+        self.stop_btn = Gtk.Button(label=_('Parar la copia'))
         self.stop_btn.add_css_class('rw-danger')
         self.stop_btn.connect('clicked', self._stop_backup)
         buttons.append(self.stop_btn)
         self.card.append(buttons)
 
         if self.backend.busy_backup:
-            self._fail('Ya hay otra copia en curso. Espera a que termine.')
+            self._fail(
+                _('Ya hay otra copia en curso. Espera a que termine.'))
             return
         self._snapshots_before = len(self.backend.list_snapshots())
         self._running = True
@@ -532,11 +543,11 @@ class FirstRunWizard(Adw.Window):
             pass
         return True
 
-    def _stop_backup(self, *_):
+    def _stop_backup(self, *_args):
         self._stop_requested = True
         self._stop_attempts = 0
         if hasattr(self, 'file_label'):
-            self.file_label.set_text('Deteniendo la copia…')
+            self.file_label.set_text(_('Deteniendo la copia…'))
         if hasattr(self, 'stop_btn'):
             self.stop_btn.set_sensitive(False)
         self._attempt_stop()
@@ -587,25 +598,26 @@ class FirstRunWizard(Adw.Window):
             self.close()
             return
         if stopped and not created:
-            self._fail('Copia detenida. No se guardó nada.')
+            self._fail(_('Copia detenida. No se guardó nada.'))
             return
         if error or error_message:
             detail = str(error or error_message)
-            self._fail(f'La primera copia falló: {detail[:160]}')
+            self._fail(_('La primera copia falló: {detail}').format(
+                detail=detail[:160]))
             return
 
         self.bar.set_fraction(1.0)
-        self.file_label.set_text('Primera copia terminada')
+        self.file_label.set_text(_('Primera copia terminada'))
         GLib.timeout_add(900, self._close_after)
 
     def _fail(self, message):
         self.bar.set_fraction(0.0)
         self.file_label.set_text(message)
         row = Gtk.Box(spacing=8, halign=Gtk.Align.END)
-        retry = Gtk.Button(label='Reintentar')
+        retry = Gtk.Button(label=_('Reintentar'))
         retry.add_css_class('rw-primary')
         retry.connect('clicked', lambda *_: self._retry())
-        close = Gtk.Button(label='Cerrar')
+        close = Gtk.Button(label=_('Cerrar'))
         close.add_css_class('rw-soft')
         close.connect('clicked', lambda *_: self.close())
         row.append(close)
@@ -636,16 +648,16 @@ class FirstRunWizard(Adw.Window):
         self.close()
         return False
 
-    def _on_close_request(self, *_):
+    def _on_close_request(self, *_args):
         if not self._running:
             self._notify()
             return False
         dialog = Adw.MessageDialog(
             transient_for=self, modal=True,
-            heading='La primera copia sigue en marcha',
-            body='Si cierras ahora, la copia se quedará a medias.')
-        dialog.add_response('cancel', 'Cancelar')
-        dialog.add_response('stop', 'Detener y salir')
+            heading=_('La primera copia sigue en marcha'),
+            body=_('Si cierras ahora, la copia se quedará a medias.'))
+        dialog.add_response('cancel', _('Cancelar'))
+        dialog.add_response('stop', _('Detener y salir'))
         dialog.set_response_appearance('stop',
                                        Adw.ResponseAppearance.DESTRUCTIVE)
         dialog.set_close_response('cancel')

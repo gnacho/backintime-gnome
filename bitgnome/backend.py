@@ -18,6 +18,8 @@ import subprocess
 import sys
 import threading
 
+from bitgnome.i18n import _
+
 _LOCATED = False
 _IMPORT_ERROR = None
 
@@ -86,7 +88,7 @@ def _locate_common():
                 sys.path.insert(0, path)
             break
     else:
-        _IMPORT_ERROR = 'No se encontró el núcleo de Back In Time (common/).'
+        _IMPORT_ERROR = _('No se encontró el núcleo de Back In Time (common/).')
         return
 
     try:
@@ -126,7 +128,8 @@ def _locate_common():
                 bitbase.context['--config'].parent.mkdir(parents=True,
                                                          exist_ok=True)
     except Exception as exc:              # noqa: BLE001
-        _IMPORT_ERROR = f'Error importando el núcleo de Back In Time: {exc}'
+        _IMPORT_ERROR = _('Error importando el núcleo de Back In Time: {error}'
+                          ).format(error=exc)
 
 
 _locate_common()
@@ -173,11 +176,11 @@ def snapshot_modes():
     """(mode ids, labels) offered by the loaded core."""
     if supports_encfs():
         return (['local', 'ssh', 'local_encfs', 'ssh_encfs'],
-                ['Local', 'SSH', 'Local cifrado (encfs)',
-                 'SSH cifrado (encfs)'])
+                ['Local', 'SSH', _('Local cifrado (encfs)'),
+                 _('SSH cifrado (encfs)')])
     return (['local', 'ssh', 'local_gocryptfs', 'ssh_gocryptfs'],
-            ['Local', 'SSH', 'Local cifrado (gocryptfs)',
-             'SSH cifrado (gocryptfs)'])
+            ['Local', 'SSH', _('Local cifrado (gocryptfs)'),
+             _('SSH cifrado (gocryptfs)')])
 
 
 def _list_snapshots_needs_mount_path():
@@ -214,7 +217,8 @@ class Backend:
             self.cfg = config.Config()
             self._load_config()
         except SystemExit as exc:         # cli.get_config_and_select_profile
-            self.error = f'Config no válida (exit {exc.code})'
+            self.error = _('Config no válida (exit {code})').format(
+                code=exc.code)
         except Exception as exc:          # noqa: BLE001
             self.error = str(exc)
 
@@ -350,28 +354,28 @@ class Backend:
                                  device_problem_text, write_probe)
 
         if self.cfg is None:
-            raise RuntimeError(self.error or 'Núcleo no disponible')
+            raise RuntimeError(self.error or _('Núcleo no disponible'))
         previous_mode = self.profile_mode()
         if previous_mode not in ('local', 'local_gocryptfs'):
             raise RuntimeError(
-                'El alta guiada solo está disponible para perfiles locales')
+                _('El alta guiada solo está disponible para perfiles locales'))
         previous_path = self.destination_path()
         same_path = (os.path.realpath(destination) ==
                      os.path.realpath(previous_path or ''))
         if previous_mode == 'local_gocryptfs' and not same_path:
             raise RuntimeError(
-                'No cambies el destino de un perfil cifrado desde aquí. '
-                'Crea un perfil nuevo para conservar las copias anteriores.')
+                _('No cambies el destino de un perfil cifrado desde aquí. '
+                  'Crea un perfil nuevo para conservar las copias anteriores.'))
         if previous_mode != 'local_gocryptfs' and self.list_snapshots():
             raise RuntimeError(
-                'El perfil actual ya tiene copias. Crea un perfil nuevo '
-                'para no ocultar las instantáneas sin cifrar.')
+                _('El perfil actual ya tiene copias. Crea un perfil nuevo '
+                  'para no ocultar las instantáneas sin cifrar.'))
         if not destination_is_empty_or_initialized(destination):
             raise RuntimeError(
-                'Elige una carpeta nueva o vacía, o un destino Gocryptfs '
-                'ya inicializado')
+                _('Elige una carpeta nueva o vacía, o un destino Gocryptfs '
+                  'ya inicializado'))
         if tools.which('gocryptfs') is None:
-            raise RuntimeError('Gocryptfs no está instalado')
+            raise RuntimeError(_('Gocryptfs no está instalado'))
 
         previous_save = self.cfg.passwordSave()
         previous_cache = self.cfg.passwordUseCache()
@@ -380,7 +384,7 @@ class Backend:
             previous_password = self.cfg.get_encryption_password()
             password = previous_password
         if not password:
-            raise RuntimeError('Escribe una contraseña para el cifrado')
+            raise RuntimeError(_('Escribe una contraseña para el cifrado'))
 
         mode = 'local_gocryptfs'
         manager = None
@@ -417,7 +421,7 @@ class Backend:
             finally:
                 core_events.event_error.deregister(collect_error)
             if not valid:
-                detail = errors[-1] if errors else 'Destino no válido'
+                detail = errors[-1] if errors else _('Destino no válido')
                 raise RuntimeError(detail)
 
             self.cfg.setPasswordSave(save_in_keyring, mode=mode)
@@ -516,7 +520,7 @@ class Backend:
                 continue
             values = {}
             for line in out.stdout.splitlines():
-                key, _, value = line.partition('=')
+                key, _sep, value = line.partition('=')
                 values[key.strip()] = value.strip()
             if values.get('LoadState') != 'loaded':
                 continue
@@ -674,12 +678,12 @@ class Backend:
         user = (user or '').strip()
         path = (path or '').strip()
         if not host:
-            return False, 'Escribe el servidor SSH'
+            return False, _('Escribe el servidor SSH')
         if not path:
-            return False, 'Escribe la ruta remota de las copias'
+            return False, _('Escribe la ruta remota de las copias')
         if shutil.which('sshfs') is None:
-            return False, ('Falta sshfs en este equipo: instálalo para usar '
-                           'destinos SSH')
+            return False, _('Falta sshfs en este equipo: instálalo para usar '
+                            'destinos SSH')
         target = f'{user}@{host}' if user else host
         command = self.SSH_REMOTE_CHECK.format(path=shlex.quote(path))
         argv = ['ssh', '-p', str(port or 22), '-o', 'BatchMode=yes',
@@ -690,44 +694,54 @@ class Backend:
             out = subprocess.run(argv, capture_output=True, text=True,
                                  timeout=25)
         except subprocess.TimeoutExpired:
-            return False, f'El servidor {target} no responde en 25 segundos'
+            return False, _('El servidor {target} no responde en 25 segundos'
+                            ).format(target=target)
         except OSError as exc:
-            return False, f'No se pudo lanzar ssh: {exc}'
+            return False, _('No se pudo lanzar ssh: {error}').format(error=exc)
         stderr = (out.stderr or '').strip().splitlines()
         detail = stderr[-1] if stderr else ''
         values = {}
         for line in (out.stdout or '').splitlines():
-            key, _, value = line.partition('=')
+            key, _sep, value = line.partition('=')
             values[key.strip()] = value.strip()
         if out.returncode != 0 or 'state' not in values:
             lowered = detail.lower()
             if 'permission denied' in lowered or 'publickey' in lowered:
-                return False, ('La llave SSH no ha sido aceptada por '
-                               f'{target}. Añádela al usuario remoto.')
+                return False, (_('La llave SSH no ha sido aceptada por '
+                                 '{target}. Añádela al usuario remoto.')
+                               .format(target=target))
             if 'could not resolve' in lowered:
-                return False, f'No se puede resolver el nombre {host}'
+                return False, _('No se puede resolver el nombre {host}'
+                                ).format(host=host)
             if ('connection refused' in lowered or 'timed out' in lowered
                     or 'no route to host' in lowered):
-                return False, (f'No se puede conectar a {target} en el puerto '
-                               f'{port or 22}')
-            return False, f'La comprobación falló: {detail or out.returncode}'
+                return False, (_('No se puede conectar a {target} en el '
+                                 'puerto {port}')
+                               .format(target=target, port=port or 22))
+            return False, _('La comprobación falló: {detail}').format(
+                detail=detail or out.returncode)
         state = values.get('state', '')
         if state == 'dir-readonly':
-            return False, f'La ruta {path} existe pero no se puede escribir'
+            return False, _('La ruta {path} existe pero no se puede escribir'
+                            ).format(path=path)
         if state == 'parent-missing':
-            return False, (f'La carpeta padre de {path} no existe o no se '
-                           'puede escribir')
+            return False, (_('La carpeta padre de {path} no existe o no se '
+                             'puede escribir').format(path=path))
         if values.get('rsync', 'MISSING') == 'MISSING':
-            return False, ('El servidor no tiene rsync instalado y Back In '
-                           'Time lo necesita allí para copiar por SSH')
+            return False, _('El servidor no tiene rsync instalado y Back In '
+                            'Time lo necesita allí para copiar por SSH')
         space = ''
         try:
-            space = f' · {format_size(int(values.get("free") or 0) * 1024)} libres'
+            space = _(' · {size} libres').format(
+                size=format_size(int(values.get("free") or 0) * 1024))
         except (TypeError, ValueError):
             space = ''
-        where = path if state == 'dir-writable' else f'{path} (se creará)'
-        return True, (f'Conexión correcta con {target} · '
-                      f'{values.get("rsync", "rsync")}{space} en {where}')
+        where = (path if state == 'dir-writable'
+                 else _('{path} (se creará)').format(path=path))
+        return True, _('Conexión correcta con {target} · {rsync}{space} en '
+                       '{where}').format(target=target,
+                                         rsync=values.get('rsync', 'rsync'),
+                                         space=space, where=where)
 
     def password_available(self):
         """Whether an encrypted profile has its password at hand.
@@ -784,7 +798,7 @@ class Backend:
         if self._mount_manager is not None:
             return True, None
         if not self.password_available():
-            self.destination_problem = (
+            self.destination_problem = _(
                 'El perfil cifrado necesita su contraseña: desbloquéalo para '
                 'poder leer las copias.')
             return False, self.destination_problem
@@ -934,9 +948,11 @@ class Backend:
             # rsync can finish fine and the core still fail afterwards
             # (retention, free space). Saying "the snapshot failed" there is
             # wrong: the copy exists.
-            detail = f': {reason}' if reason else ''
-            return f'La copia se creó, pero el motor falló al terminar{detail}'
-        return f'La copia falló{": " + reason if reason else ""}'
+            detail = ': ' + reason if reason else ''
+            return _('La copia se creó, pero el motor falló al terminar'
+                     '{detail}').format(detail=detail)
+        return _('La copia falló{detail}').format(
+            detail=': ' + reason if reason else '')
 
     @staticmethod
     def engine_message(msg):

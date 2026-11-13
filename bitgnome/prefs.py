@@ -11,6 +11,7 @@ gi.require_version('Adw', '1')
 from gi.repository import Adw, Gtk  # noqa: E402
 
 from . import backend as _backend  # noqa: E402
+from .i18n import _  # noqa: E402
 from .settings_sheet import MODE_LABELS  # noqa: E402
 
 _MODES, _MODE_LABELS = _backend.snapshot_modes()
@@ -27,7 +28,7 @@ def _mode_index(mode):
 class PreferencesWindow(Adw.PreferencesWindow):
     def __init__(self, app):
         super().__init__(transient_for=app.get_active_window(), modal=True,
-                         title='Gestionar perfiles',
+                         title=_('Gestionar perfiles'),
                          default_width=820, default_height=640)
         self.backend = app.backend
         self.cfg = app.backend.cfg
@@ -37,7 +38,7 @@ class PreferencesWindow(Adw.PreferencesWindow):
         if self.cfg is None:
             page = Adw.PreferencesPage()
             group = Adw.PreferencesGroup()
-            row = Adw.ActionRow(title='Núcleo de Back In Time no disponible',
+            row = Adw.ActionRow(title=_('Núcleo de Back In Time no disponible'),
                                 subtitle=self.backend.error or '')
             group.add(row)
             page.add(group)
@@ -59,15 +60,19 @@ class PreferencesWindow(Adw.PreferencesWindow):
             user = self.cfg.sshUser() or ''
             path = self.cfg.sshSnapshotsPath() or ''
         except Exception as exc:          # noqa: BLE001
-            self._show_ssh_result(False, f'No se pudo leer la configuración: {exc}')
+            self._show_ssh_result(
+                False, _('No se pudo leer la configuración: {error}').format(
+                    error=exc))
             return
         self.ssh_check_btn.set_sensitive(False)
-        self._show_ssh_result(True, 'Comprobando…')
+        self._show_ssh_result(True, _('Comprobando…'))
 
         def done(result, error):
             self.ssh_check_btn.set_sensitive(True)
             if error:
-                self._show_ssh_result(False, f'La comprobación falló: {error}')
+                self._show_ssh_result(
+                    False, _('La comprobación falló: {error}').format(
+                        error=error))
                 return False
             ok, message = result
             self._show_ssh_result(ok, message)
@@ -80,7 +85,7 @@ class PreferencesWindow(Adw.PreferencesWindow):
         if self.ssh_result is None:
             return
         self.ssh_result.set_visible(True)
-        self.ssh_result.set_title('Todo listo' if ok else 'Hay un problema')
+        self.ssh_result.set_title(_('Todo listo') if ok else _('Hay un problema'))
         self.ssh_result.set_subtitle(message)
 
     def _save(self):
@@ -92,10 +97,10 @@ class PreferencesWindow(Adw.PreferencesWindow):
             # never got.
             dialog = Adw.MessageDialog(
                 transient_for=self, modal=True,
-                heading='No se pudo guardar la configuración',
-                body=f'El cambio se ve en pantalla pero no se ha guardado: '
-                     f'{exc}')
-            dialog.add_response('close', 'Cerrar')
+                heading=_('No se pudo guardar la configuración'),
+                body=_('El cambio se ve en pantalla pero no se ha guardado: '
+                       '{error}').format(error=exc))
+            dialog.add_response('close', _('Cerrar'))
             dialog.set_default_response('close')
             dialog.present()
             self._save_dialog = dialog
@@ -143,29 +148,30 @@ class PreferencesWindow(Adw.PreferencesWindow):
 
     # ------------------------------------------------------------- general
     def _general_page(self):
-        page = Adw.PreferencesPage(title='General', icon_name='emblem-system-symbolic')
+        page = Adw.PreferencesPage(title=_('General'),
+                                   icon_name='emblem-system-symbolic')
 
-        mode_group = Adw.PreferencesGroup(title='Modo')
+        mode_group = Adw.PreferencesGroup(title=_('Modo'))
         try:
             current_mode = self.cfg.snapshotsMode()
         except Exception:  # noqa: BLE001
             current_mode = 'local'
-        mode_row = Adw.ComboRow(title='Modo de instantáneas',
-                                subtitle='Dónde se guardan las copias')
+        mode_row = Adw.ComboRow(title=_('Modo de instantáneas'),
+                                subtitle=_('Dónde se guardan las copias'))
         mode_row.set_model(Gtk.StringList.new(_MODE_LABELS))
         mode_row.set_selected(_mode_index(current_mode))
         mode_row.connect('notify::selected', self._on_mode_changed)
         mode_group.add(mode_row)
         self.mode_row = mode_row
 
-        self.path_row = Adw.ActionRow(title='Guardar instantáneas en')
+        self.path_row = Adw.ActionRow(title=_('Guardar instantáneas en'))
         path_row = self.path_row
         self.path_entry = Gtk.Entry(hexpand=True, valign=Gtk.Align.CENTER)
         try:
             self.path_entry.set_text(self.cfg.snapshotsPath())
         except Exception:  # noqa: BLE001
             pass
-        choose = Gtk.Button(label='Cambiar…', valign=Gtk.Align.CENTER)
+        choose = Gtk.Button(label=_('Cambiar…'), valign=Gtk.Align.CENTER)
         choose.connect('clicked', self._choose_snapshot_path)
         path_entry = self.path_entry
 
@@ -187,9 +193,9 @@ class PreferencesWindow(Adw.PreferencesWindow):
 
         # SSH
         self.ssh_group = Adw.PreferencesGroup(title='SSH')
-        self._entry_row(self.ssh_group, 'Servidor',
+        self._entry_row(self.ssh_group, _('Servidor'),
                         self.cfg.sshHost, self.cfg.setSshHost)
-        port_row = Adw.ActionRow(title='Puerto')
+        port_row = Adw.ActionRow(title=_('Puerto'))
         port_spin = Gtk.SpinButton(adjustment=Gtk.Adjustment(
             value=22, lower=1, upper=65535, step_increment=1),
             valign=Gtk.Align.CENTER)
@@ -201,17 +207,17 @@ class PreferencesWindow(Adw.PreferencesWindow):
             self.cfg.setSshPort(str(r.get_value_as_int())), self._save()))
         port_row.add_suffix(port_spin)
         self.ssh_group.add(port_row)
-        self._entry_row(self.ssh_group, 'Usuario',
+        self._entry_row(self.ssh_group, _('Usuario'),
                         self.cfg.sshUser, self.cfg.setSshUser)
-        self._entry_row(self.ssh_group, 'Ruta remota',
+        self._entry_row(self.ssh_group, _('Ruta remota'),
                         self.cfg.sshSnapshotsPath, self.cfg.setSshSnapshotsPath)
-        self._entry_row(self.ssh_group, 'Clave privada',
+        self._entry_row(self.ssh_group, _('Clave privada'),
                         self.cfg.sshPrivateKeyFile, self.cfg.setSshPrivateKeyFile)
 
         check_row = Adw.ActionRow(
-            title='Probar la conexión',
-            subtitle='Comprueba ssh, la ruta remota y que allí haya rsync')
-        self.ssh_check_btn = Gtk.Button(label='Probar')
+            title=_('Probar la conexión'),
+            subtitle=_('Comprueba ssh, la ruta remota y que allí haya rsync'))
+        self.ssh_check_btn = Gtk.Button(label=_('Probar'))
         self.ssh_check_btn.add_css_class('rw-soft')
         self.ssh_check_btn.set_valign(Gtk.Align.CENTER)
         self.ssh_check_btn.connect('clicked', self._check_ssh)
@@ -224,9 +230,10 @@ class PreferencesWindow(Adw.PreferencesWindow):
         self._update_ssh_visibility(current_mode)
 
         # Schedule
-        sched_group = Adw.PreferencesGroup(title='Programación')
-        sched_row = Adw.ComboRow(title='Programar instantáneas',
-                                 subtitle='Entrada de cron gestionada por Back In Time')
+        sched_group = Adw.PreferencesGroup(title=_('Programación'))
+        sched_row = Adw.ComboRow(
+            title=_('Programar instantáneas'),
+            subtitle=_('Entrada de cron gestionada por Back In Time'))
         modes = self._schedule_modes()
         labels = [MODE_LABELS.get(getattr(m, 'name', str(m)),
                                   getattr(m, 'name', str(m))) for m in modes]
@@ -262,7 +269,7 @@ class PreferencesWindow(Adw.PreferencesWindow):
             out.append(getattr(c, member.name, member))
         return out
 
-    def _on_mode_changed(self, row, *_):
+    def _on_mode_changed(self, row, *_args):
         mode = _MODES[row.get_selected()]
         current = self.backend.profile_mode()
         if mode != current and mode == 'local_gocryptfs':
@@ -277,11 +284,11 @@ class PreferencesWindow(Adw.PreferencesWindow):
             kind = 'SSH' if 'ssh' in mode else 'EncFS'
             dialog = Adw.MessageDialog(
                 transient_for=self, modal=True,
-                heading=f'Cifrado {kind}',
-                body='Este modo necesita un flujo guiado que todavía no está '
-                     'disponible. Usa Gestionar perfiles con un perfil '
-                     'existente o crea uno nuevo antes de cambiar el modo.')
-            dialog.add_response('close', 'Cerrar')
+                heading=_('Cifrado {kind}').format(kind=kind),
+                body=_('Este modo necesita un flujo guiado que todavía no está '
+                       'disponible. Usa Gestionar perfiles con un perfil '
+                       'existente o crea uno nuevo antes de cambiar el modo.'))
+            dialog.add_response('close', _('Cerrar'))
             dialog.present()
             return
         self.cfg.setSnapshotsMode(mode)
@@ -302,8 +309,8 @@ class PreferencesWindow(Adw.PreferencesWindow):
         if getattr(self, 'path_row', None) is not None:
             self.path_row.set_visible(not ssh)
 
-    def _choose_snapshot_path(self, *_):
-        dlg = Gtk.FileChooserNative(title='Elegir carpeta de destino',
+    def _choose_snapshot_path(self, *_args):
+        dlg = Gtk.FileChooserNative(title=_('Elegir carpeta de destino'),
                                     transient_for=self,
                                     action=Gtk.FileChooserAction.SELECT_FOLDER)
 
@@ -320,22 +327,22 @@ class PreferencesWindow(Adw.PreferencesWindow):
 
     # ------------------------------------------------------------- include
     def _include_page(self):
-        page = Adw.PreferencesPage(title='Incluir',
+        page = Adw.PreferencesPage(title=_('Incluir'),
                                    icon_name='folder-symbolic')
         group = Adw.PreferencesGroup(
-            title='Carpetas y archivos a respaldar',
-            description='rsync enlaza los archivos sin cambios: no ocupan '
-                        'espacio extra.')
+            title=_('Carpetas y archivos a respaldar'),
+            description=_('rsync enlaza los archivos sin cambios: no ocupan '
+                          'espacio extra.'))
         self.include_group = group
         page.add(group)
         self._fill_include()
 
-        add_row = Adw.ActionRow(title='Añadir…')
+        add_row = Adw.ActionRow(title=_('Añadir…'))
         box = Gtk.Box(spacing=6, valign=Gtk.Align.CENTER)
-        folder_btn = Gtk.Button(label='Carpeta…')
+        folder_btn = Gtk.Button(label=_('Carpeta…'))
         folder_btn.connect('clicked', self._add_include,
                            Gtk.FileChooserAction.SELECT_FOLDER)
-        file_btn = Gtk.Button(label='Archivo…')
+        file_btn = Gtk.Button(label=_('Archivo…'))
         file_btn.connect('clicked', self._add_include,
                          Gtk.FileChooserAction.OPEN)
         box.append(folder_btn)
@@ -354,8 +361,9 @@ class PreferencesWindow(Adw.PreferencesWindow):
         except Exception:  # noqa: BLE001
             entries = []
         for path, ftype in entries:
-            row = Adw.ActionRow(title=path,
-                                subtitle='carpeta' if ftype == 0 else 'archivo')
+            row = Adw.ActionRow(
+                title=path,
+                subtitle=_('carpeta') if ftype == 0 else _('archivo'))
             rm = Gtk.Button(icon_name='user-trash-symbolic',
                             valign=Gtk.Align.CENTER, has_frame=False)
             rm.connect('clicked', self._remove_include, path, ftype)
@@ -364,7 +372,7 @@ class PreferencesWindow(Adw.PreferencesWindow):
             self._include_rows.append(row)
 
     def _add_include(self, _btn, action):
-        dlg = Gtk.FileChooserNative(title='Añadir a la copia',
+        dlg = Gtk.FileChooserNative(title=_('Añadir a la copia'),
                                     transient_for=self, action=action)
 
         def on_response(d, response):
@@ -395,27 +403,27 @@ class PreferencesWindow(Adw.PreferencesWindow):
 
     # ------------------------------------------------------------- exclude
     def _exclude_page(self):
-        page = Adw.PreferencesPage(title='Excluir',
+        page = Adw.PreferencesPage(title=_('Excluir'),
                                    icon_name='action-unavailable-symbolic')
         group = Adw.PreferencesGroup(
-            title='Patrones de exclusión',
-            description='Comodines de rsync: * dentro de un nivel, '
-                        '** a cualquier profundidad.')
+            title=_('Patrones de exclusión'),
+            description=_('Comodines de rsync: * dentro de un nivel, '
+                          '** a cualquier profundidad.'))
         self.exclude_group = group
         page.add(group)
         self._fill_exclude()
 
-        add_row = Adw.EntryRow(title='Nuevo patrón o ruta…')
+        add_row = Adw.EntryRow(title=_('Nuevo patrón o ruta…'))
         add_row.connect('apply', self._add_exclude)
         group.add(add_row)
 
-        size_group = Adw.PreferencesGroup(title='Por tamaño')
+        size_group = Adw.PreferencesGroup(title=_('Por tamaño'))
         try:
             enabled = self.cfg.excludeBySizeEnabled()
             value = self.cfg.excludeBySize()
         except Exception:  # noqa: BLE001
             enabled, value = False, 500
-        row = Adw.ActionRow(title='Excluir archivos mayores de')
+        row = Adw.ActionRow(title=_('Excluir archivos mayores de'))
         sw = Gtk.Switch(active=enabled, valign=Gtk.Align.CENTER)
         spin = Gtk.SpinButton(adjustment=Gtk.Adjustment(
             value=value, lower=1, upper=999999, step_increment=50))
@@ -469,21 +477,21 @@ class PreferencesWindow(Adw.PreferencesWindow):
 
     # ---------------------------------------------------------- auto-remove
     def _autoremove_page(self):
-        page = Adw.PreferencesPage(title='Autoeliminar',
+        page = Adw.PreferencesPage(title=_('Autoeliminar'),
                                    icon_name='user-trash-symbolic')
         cfg = self.cfg
 
-        old_group = Adw.PreferencesGroup(title='Antigüedad')
+        old_group = Adw.PreferencesGroup(title=_('Antigüedad'))
         try:
             enabled, value, unit = cfg.removeOldSnapshots()
         except Exception:  # noqa: BLE001
             enabled, value, unit = True, 10, 80
-        row = Adw.ActionRow(title='Eliminar instantáneas más antiguas de')
+        row = Adw.ActionRow(title=_('Eliminar instantáneas más antiguas de'))
         sw = Gtk.Switch(active=enabled, valign=Gtk.Align.CENTER)
         spin = Gtk.SpinButton(adjustment=Gtk.Adjustment(
             value=value, lower=1, upper=9999, step_increment=1))
         spin.set_valign(Gtk.Align.CENTER)
-        combo = Gtk.DropDown.new_from_strings(['días', 'semanas', 'años'])
+        combo = Gtk.DropDown.new_from_strings([_('días'), _('semanas'), _('años')])
         units = [20, 30, 80]
         try:
             unit_val = int(unit.value if hasattr(unit, 'value') else unit)
@@ -506,17 +514,18 @@ class PreferencesWindow(Adw.PreferencesWindow):
         page.add(old_group)
 
         smart_group = Adw.PreferencesGroup(
-            title='Eliminación inteligente',
-            description='Tras cada instantánea se aplica este patrón de '
-                        'conservación.')
+            title=_('Eliminación inteligente'),
+            description=_('Tras cada instantánea se aplica este patrón de '
+                          'conservación.'))
         try:
             smart = cfg.smartRemove()
         except Exception:  # noqa: BLE001
             smart = (False, 2, 7, 4, 24)
         enabled, keep_all, keep_day, keep_week, keep_month = smart
 
-        row_sw = Adw.ActionRow(title='Eliminación inteligente',
-                               subtitle='Conservar solo lo que indica el patrón')
+        row_sw = Adw.ActionRow(
+            title=_('Eliminación inteligente'),
+            subtitle=_('Conservar solo lo que indica el patrón'))
         sw = Gtk.Switch(active=enabled, valign=Gtk.Align.CENTER)
         row_sw.add_suffix(sw)
         row_sw.set_activatable_widget(sw)
@@ -543,48 +552,48 @@ class PreferencesWindow(Adw.PreferencesWindow):
             smart_group.add(r)
             spins[key] = spin
 
-        spin_row('all', 'Conservar todas durante (días)', keep_all)
-        spin_row('day', 'Conservar una al día durante (días)', keep_day)
-        spin_row('week', 'Conservar una a la semana durante (semanas)', keep_week)
-        spin_row('month', 'Conservar una al mes durante (meses)', keep_month)
+        spin_row('all', _('Conservar todas durante (días)'), keep_all)
+        spin_row('day', _('Conservar una al día durante (días)'), keep_day)
+        spin_row('week', _('Conservar una a la semana durante (semanas)'), keep_week)
+        spin_row('month', _('Conservar una al mes durante (meses)'), keep_month)
         page.add(smart_group)
         return page
 
     # ------------------------------------------------------------- options
     def _options_page(self):
-        page = Adw.PreferencesPage(title='Opciones',
+        page = Adw.PreferencesPage(title=_('Opciones'),
                                    icon_name='emblem-system-symbolic')
         cfg = self.cfg
 
-        notif = Adw.PreferencesGroup(title='Notificaciones')
-        self._maybe_switch(notif, 'Notificar errores y avisos', '',
+        notif = Adw.PreferencesGroup(title=_('Notificaciones'))
+        self._maybe_switch(notif, _('Notificar errores y avisos'), '',
                            'notify', 'setNotify')
         page.add(notif)
 
-        perf = Adw.PreferencesGroup(title='Rendimiento')
-        self._maybe_switch(perf, 'Ejecutar cron con nice -n19',
-                           'Menor prioridad de CPU',
+        perf = Adw.PreferencesGroup(title=_('Rendimiento'))
+        self._maybe_switch(perf, _('Ejecutar cron con nice -n19'),
+                           _('Menor prioridad de CPU'),
                            'niceOnCron', 'setNiceOnCron')
-        self._maybe_switch(perf, 'Ejecutar cron con ionice -c2 -n7',
-                           'Menor prioridad de E/S',
+        self._maybe_switch(perf, _('Ejecutar cron con ionice -c2 -n7'),
+                           _('Menor prioridad de E/S'),
                            'ioniceOnCron', 'setIoniceOnCron')
         page.add(perf)
 
-        rest = Adw.PreferencesGroup(title='Restauración y archivos')
-        self._maybe_switch(rest, 'Copia de seguridad antes de restaurar',
+        rest = Adw.PreferencesGroup(title=_('Restauración y archivos'))
+        self._maybe_switch(rest, _('Copia de seguridad antes de restaurar'),
                            'archivo.backup.YYYYMMDD',
                            'backupOnRestore', 'setBackupOnRestore')
-        self._maybe_switch(rest, 'Continuar aunque haya errores',
-                           'Conserva instantáneas incompletas',
+        self._maybe_switch(rest, _('Continuar aunque haya errores'),
+                           _('Conserva instantáneas incompletas'),
                            'continueOnErrors', 'setContinueOnErrors')
-        self._maybe_switch(rest, 'Usar sumas de comprobación',
-                           'Más lento, pero más fiable que fecha+tamaño',
+        self._maybe_switch(rest, _('Usar sumas de comprobación'),
+                           _('Más lento, pero más fiable que fecha+tamaño'),
                            'useChecksum', 'setUseChecksum')
-        self._maybe_switch(rest, 'Copiar enlaces simbólicos como archivos', '',
+        self._maybe_switch(rest, _('Copiar enlaces simbólicos como archivos'), '',
                            'copyLinks', 'setCopyLinks')
-        self._maybe_switch(rest, 'Preservar ACL', '',
+        self._maybe_switch(rest, _('Preservar ACL'), '',
                            'preserveAcl', 'setPreserveAcl')
-        self._maybe_switch(rest, 'Preservar atributos extendidos (xattr)', '',
+        self._maybe_switch(rest, _('Preservar atributos extendidos (xattr)'), '',
                            'preserveXattr', 'setPreserveXattr')
         page.add(rest)
         return page
@@ -599,35 +608,36 @@ class PreferencesWindow(Adw.PreferencesWindow):
 
     # -------------------------------------------------------------- expert
     def _expert_page(self):
-        page = Adw.PreferencesPage(title='Avanzado',
+        page = Adw.PreferencesPage(title=_('Avanzado'),
                                    icon_name='utilities-terminal-symbolic')
 
         rsync_group = Adw.PreferencesGroup(title='rsync')
-        self._maybe_switch(rsync_group, 'Modo rsync completo',
-                           'Una sola pasada; más fiel pero más lento',
+        self._maybe_switch(rsync_group, _('Modo rsync completo'),
+                           _('Una sola pasada; más fiel pero más lento'),
                            'fullRsync', 'setFullRsync')
-        self._maybe_switch(rsync_group, 'Sumas de comprobación en rsync completo',
+        self._maybe_switch(rsync_group, _('Sumas de comprobación en rsync completo'),
                            '', 'fullRsyncWithChecksum',
                            'setFullRsyncWithChecksum')
         page.add(rsync_group)
 
         ssh_group = Adw.PreferencesGroup(title='SSH')
-        self._maybe_switch(ssh_group, 'Comprobar comandos en el remoto', '',
+        self._maybe_switch(ssh_group, _('Comprobar comandos en el remoto'), '',
                            'sshCheckCommands', 'setSshCheckCommands')
-        self._maybe_switch(ssh_group, 'Comprobar que el remoto está en línea (ping)',
+        self._maybe_switch(ssh_group,
+                           _('Comprobar que el remoto está en línea (ping)'),
                            '', 'sshCheckPingHost', 'setSshCheckPingHost')
-        self._maybe_switch(ssh_group, 'Guardar contraseña en el llavero', '',
+        self._maybe_switch(ssh_group, _('Guardar contraseña en el llavero'), '',
                            'passwordSave', 'setPasswordSave')
-        self._maybe_switch(ssh_group, 'Usar caché de contraseña', '',
+        self._maybe_switch(ssh_group, _('Usar caché de contraseña'), '',
                            'passwordUseCache', 'setPasswordUseCache')
         page.add(ssh_group)
 
-        log_group = Adw.PreferencesGroup(title='Registro y cron')
-        self._maybe_switch(log_group, 'Redirigir stdout a /dev/null en cron', '',
+        log_group = Adw.PreferencesGroup(title=_('Registro y cron'))
+        self._maybe_switch(log_group, _('Redirigir stdout a /dev/null en cron'), '',
                            'redirectStdoutInCron', 'setRedirectStdoutInCron')
-        self._maybe_switch(log_group, 'Redirigir stderr a /dev/null en cron', '',
+        self._maybe_switch(log_group, _('Redirigir stderr a /dev/null en cron'), '',
                            'redirectStderrInCron', 'setRedirectStderrInCron')
-        self._maybe_switch(log_group, 'No copiar con batería', '',
+        self._maybe_switch(log_group, _('No copiar con batería'), '',
                            'noSnapshotOnBattery', 'setNoSnapshotOnBattery')
         page.add(log_group)
         return page
