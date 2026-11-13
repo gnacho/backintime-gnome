@@ -1746,7 +1746,9 @@ class MainWindow(Adw.ApplicationWindow):
             elif error:
                 self.toast(f'Error en la instantánea: {error}')
             elif error_message:
-                self.toast(f'Instantánea terminada con errores: {error_message}')
+                # The backend already writes a full sentence and knows whether
+                # the snapshot exists or not.
+                self.toast(error_message)
             else:
                 self.toast('Punto en el tiempo creado', 'Ver ahora',
                            lambda: self.set_snapshot(None))
