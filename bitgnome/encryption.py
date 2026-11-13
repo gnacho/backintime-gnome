@@ -90,9 +90,10 @@ class EncryptionSetupDialog(Adw.Window):
         self.on_done = on_done
         mode = self.backend.profile_mode()
         self.existing = 'gocryptfs' in mode or 'encfs' in mode
-        self.destination = ''
-        if self.existing:
-            self.destination = self.backend.destination_path() or ''
+        # Start from the current destination so the user does not have to
+        # browse to a /run/media/<uuid>/ path by hand. It is still validated:
+        # an encrypted profile needs an empty or already initialised folder.
+        self.destination = self.backend.destination_path() or ''
         root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
         root.set_margin_top(22)
         root.set_margin_bottom(22)
