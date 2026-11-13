@@ -13,6 +13,7 @@ import contextlib
 import inspect
 import os
 import shutil
+import shlex
 import subprocess
 import sys
 import threading
@@ -645,6 +646,88 @@ class Backend:
             return mode, path or 'sin configurar'
         except Exception:                 # noqa: BLE001
             return '?', '?'
+
+    SSH_REMOTE_CHECK = (
+        'rsync="MISSING"; command -v rsync >/dev/null 2>&1 && '
+        'rsync=$(rsync --version 2>/dev/null | head -1); '
+        'echo "rsync=$rsync"; '
+        'if [ -d {path} ]; then '
+        'if [ -w {path} ]; then echo "state=dir-writable"; '
+        'else echo "state=dir-readonly"; fi; '
+        'else parent=$(dirname {path}); '
+        'if [ -d "$parent" ] && [ -w "$parent" ]; then '
+        'echo "state=parent-writable"; '
+        'else echo "state=parent-missing"; fi; fi; '
+        'target={path}; [ -d {path} ] || target=$(dirname {path}); '
+        'echo "free=$(df -Pk "$target" 2>/dev/null | awk \'NR==2{{print $4}}\')"'
+    )
+
+    def check_ssh_destination(self, host, port, user, path):
+        """Probe an SSH destination before saving it.
+
+        Back In Time copies over SSH with rsync on the *remote* side, so a
+        reachable host is not enough: rsync has to be installed and the path
+        writable. Checking this here avoids saving a profile whose first
+        snapshot fails.
+        """
+        host = (host or '').strip()
+        user = (user or '').strip()
+        path = (path or '').strip()
+        if not host:
+            return False, 'Escribe el servidor SSH'
+        if not path:
+            return False, 'Escribe la ruta remota de las copias'
+        if shutil.which('sshfs') is None:
+            return False, ('Falta sshfs en este equipo: instálalo para usar '
+                           'destinos SSH')
+        target = f'{user}@{host}' if user else host
+        command = self.SSH_REMOTE_CHECK.format(path=shlex.quote(path))
+        argv = ['ssh', '-p', str(port or 22), '-o', 'BatchMode=yes',
+                '-o', 'ConnectTimeout=8',
+                '-o', 'StrictHostKeyChecking=accept-new',
+                target, command]
+        try:
+            out = subprocess.run(argv, capture_output=True, text=True,
+                                 timeout=25)
+        except subprocess.TimeoutExpired:
+            return False, f'El servidor {target} no responde en 25 segundos'
+        except OSError as exc:
+            return False, f'No se pudo lanzar ssh: {exc}'
+        stderr = (out.stderr or '').strip().splitlines()
+        detail = stderr[-1] if stderr else ''
+        values = {}
+        for line in (out.stdout or '').splitlines():
+            key, _, value = line.partition('=')
+            values[key.strip()] = value.strip()
+        if out.returncode != 0 or 'state' not in values:
+            lowered = detail.lower()
+            if 'permission denied' in lowered or 'publickey' in lowered:
+                return False, ('La llave SSH no ha sido aceptada por '
+                               f'{target}. Añádela al usuario remoto.')
+            if 'could not resolve' in lowered:
+                return False, f'No se puede resolver el nombre {host}'
+            if ('connection refused' in lowered or 'timed out' in lowered
+                    or 'no route to host' in lowered):
+                return False, (f'No se puede conectar a {target} en el puerto '
+                               f'{port or 22}')
+            return False, f'La comprobación falló: {detail or out.returncode}'
+        state = values.get('state', '')
+        if state == 'dir-readonly':
+            return False, f'La ruta {path} existe pero no se puede escribir'
+        if state == 'parent-missing':
+            return False, (f'La carpeta padre de {path} no existe o no se '
+                           'puede escribir')
+        if values.get('rsync', 'MISSING') == 'MISSING':
+            return False, ('El servidor no tiene rsync instalado y Back In '
+                           'Time lo necesita allí para copiar por SSH')
+        space = ''
+        try:
+            space = f' · {format_size(int(values.get("free") or 0) * 1024)} libres'
+        except (TypeError, ValueError):
+            space = ''
+        where = path if state == 'dir-writable' else f'{path} (se creará)'
+        return True, (f'Conexión correcta con {target} · '
+                      f'{values.get("rsync", "rsync")}{space} en {where}')
 
     def password_available(self):
         """Whether an encrypted profile has its password at hand.
