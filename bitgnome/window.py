@@ -26,6 +26,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402
 
 from bitgnome import ui  # noqa: E402
 from bitgnome.backend import Worker, format_size  # noqa: E402
+from bitgnome.i18n import _, ngettext  # noqa: E402
 from bitgnome.timeline import Timeline  # noqa: E402
 
 FILE_ICONS = {
@@ -53,29 +54,29 @@ def _icon_for(name, is_dir):
 
 
 AUTOMATION_ERRORS = {
-    'no crontab installed': 'No hay cron instalado',
-    'cron service not running': 'El servicio de cron no está corriendo',
-    'crontab not updated': 'El crontab no se pudo actualizar',
+    'no crontab installed': _('No hay cron instalado'),
+    'cron service not running': _('El servicio de cron no está corriendo'),
+    'crontab not updated': _('El crontab no se pudo actualizar'),
 }
 
 
 NEXT_COPY_TEXT = {
-    'DISABLED': 'sin copias automáticas',
-    'AT_EVERY_BOOT': 'cuando arranques el equipo',
-    'MINUTES_5': 'en menos de 5 minutos',
-    'MINUTES_10': 'en menos de 10 minutos',
-    'MINUTES_30': 'en menos de 30 minutos',
-    'HOUR': 'en menos de una hora',
-    'HOURS_2': 'en menos de 2 horas',
-    'HOURS_4': 'en menos de 4 horas',
-    'HOURS_6': 'en menos de 6 horas',
-    'HOURS_12': 'en menos de 12 horas',
-    'CUSTOM_HOUR': 'a la hora configurada',
-    'REPEATEDLY': 'cuando el equipo lleve un rato encendido',
-    'WEEK': 'la semana que viene',
-    'MONTH': 'el mes que viene',
-    'YEAR': 'el año que viene',
-    'UDEV': 'cuando conectes la unidad',
+    'DISABLED': _('sin copias automáticas'),
+    'AT_EVERY_BOOT': _('cuando arranques el equipo'),
+    'MINUTES_5': _('en menos de 5 minutos'),
+    'MINUTES_10': _('en menos de 10 minutos'),
+    'MINUTES_30': _('en menos de 30 minutos'),
+    'HOUR': _('en menos de una hora'),
+    'HOURS_2': _('en menos de 2 horas'),
+    'HOURS_4': _('en menos de 4 horas'),
+    'HOURS_6': _('en menos de 6 horas'),
+    'HOURS_12': _('en menos de 12 horas'),
+    'CUSTOM_HOUR': _('a la hora configurada'),
+    'REPEATEDLY': _('cuando el equipo lleve un rato encendido'),
+    'WEEK': _('la semana que viene'),
+    'MONTH': _('el mes que viene'),
+    'YEAR': _('el año que viene'),
+    'UDEV': _('cuando conectes la unidad'),
 }
 
 
@@ -90,9 +91,11 @@ def next_copy_text(mode_name, when=None):
     mode_name = (mode_name or '').upper()
     if mode_name == 'DAY' and when:
         hour, minute = when
-        return f'la próxima, mañana a las {hour:02d}:{minute:02d}'
+        return _('la próxima, mañana a las {hour:02d}:{minute:02d}').format(
+            hour=hour, minute=minute)
     text = NEXT_COPY_TEXT.get(mode_name)
-    return f'la próxima, {text}' if text else 'sin programación'
+    return (_('la próxima, {text}').format(text=text) if text
+            else _('sin programación'))
 
 
 def cron_warning(status):
@@ -100,40 +103,40 @@ def cron_warning(status):
     if not status or not status.get('problem'):
         return None
     if status['problem'] == 'binary':
-        return ('No hay cron instalado: las copias automáticas no se '
-                'ejecutarán')
+        return _('No hay cron instalado: las copias automáticas no se '
+                 'ejecutarán')
     if status['problem'] == 'udev':
-        return ('El modo «al conectar la unidad» no está disponible en esta '
-                'instalación: no hay servicio udev del núcleo.')
-    return ('El servicio de cron está parado: las copias automáticas no se '
-            'ejecutarán')
+        return _('El modo «al conectar la unidad» no está disponible en esta '
+                 'instalación: no hay servicio udev del núcleo.')
+    return _('El servicio de cron está parado: las copias automáticas no se '
+             'ejecutarán')
 
 
 def cron_fix_text(status):
     """Exact commands for the problem reported in ``status``."""
     status = status or {}
     if status.get('problem') == 'binary':
-        return ('Instala un gestor de cron y actívalo:\n\n'
-                '    sudo pacman -S --needed cronie\n'
-                '    sudo systemctl enable --now cronie.service\n\n'
-                'Vuelve a abrir la ventana para que se escriba la entrada '
-                'de las copias automáticas.')
+        return _('Instala un gestor de cron y actívalo:\n\n'
+                   '    sudo pacman -S --needed cronie\n'
+                   '    sudo systemctl enable --now cronie.service\n\n'
+                   'Vuelve a abrir la ventana para que se escriba la entrada '
+                   'de las copias automáticas.')
     if status.get('problem') == 'service':
-        return ('El paquete de cron está instalado pero su servicio no se '
-                'está ejecutando:\n\n'
-                '    sudo systemctl enable --now cronie.service\n\n'
-                'En Debian y Ubuntu el paquete es cron y la unidad '
-                'cron.service. Con fcron, fcron.service.\n\n'
-                'Comprueba el estado con:\n\n'
-                '    systemctl is-active cronie.service')
+        return _('El paquete de cron está instalado pero su servicio no se '
+                   'está ejecutando:\n\n'
+                   '    sudo systemctl enable --now cronie.service\n\n'
+                   'En Debian y Ubuntu el paquete es cron y la unidad '
+                   'cron.service. Con fcron, fcron.service.\n\n'
+                   'Comprueba el estado con:\n\n'
+                   '    systemctl is-active cronie.service')
     if status.get('problem') == 'udev':
-        return ('Las copias al conectar la unidad las programa el paquete Qt '
-                'de Back In Time mediante un servicio udev por D-Bus, que no '
-                'está instalado.\n\n'
-                'Opciones:\n\n'
-                '  - Cambia la programación a una basada en cron (cada hora, '
-                'cada día o cada semana).\n'
-                '  - Instala el paquete Qt del núcleo si quieres ese modo.')
+        return _('Las copias al conectar la unidad las programa el paquete '
+                   'Qt de Back In Time mediante un servicio udev por D-Bus, '
+                   'que no está instalado.\n\n'
+                   'Opciones:\n\n'
+                   '  - Cambia la programación a una basada en cron (cada '
+                   'hora, cada día o cada semana).\n'
+                   '  - Instala el paquete Qt del núcleo si quieres ese modo.')
     return ''
 
 
@@ -259,7 +262,7 @@ class MainWindow(Adw.ApplicationWindow):
         titles.set_valign(Gtk.Align.CENTER)
         self.title_main = Gtk.Label(label='Rewind', xalign=0)
         self.title_main.add_css_class('rw-title')
-        self.title_sub = Gtk.Label(label='Copias de seguridad', xalign=0)
+        self.title_sub = Gtk.Label(label=_('Copias de seguridad'), xalign=0)
         self.title_sub.add_css_class('rw-subtitle')
         titles.append(self.title_main)
         titles.append(self.title_sub)
@@ -267,50 +270,50 @@ class MainWindow(Adw.ApplicationWindow):
         header.pack_start(brand)
 
         self.search = Gtk.SearchEntry()
-        self.search.set_placeholder_text('Buscar en el tiempo…')
-        ui.a11y(self.search, 'Buscar en el tiempo')
+        self.search.set_placeholder_text(_('Buscar en el tiempo…'))
+        ui.a11y(self.search, _('Buscar en el tiempo'))
         self.search.add_css_class('rw-search')
         self.search.set_width_chars(18)
         self.search.connect('search-changed', self._on_search_changed)
         header.set_title_widget(self.search)
 
-        primary = Gtk.Button(label='Crear copia ahora')
+        primary = Gtk.Button(label=_('Crear copia ahora'))
         primary.add_css_class('rw-primary')
-        primary.set_tooltip_text('Tomar una instantánea ahora (Ctrl+S)')
+        primary.set_tooltip_text(_('Tomar una instantánea ahora (Ctrl+S)'))
         primary.connect('clicked', lambda *_: self.take_snapshot())
         header.pack_end(primary)
         self.snap_btn = primary
 
         self.settings_btn = Gtk.Button(icon_name='emblem-system-symbolic')
         self.settings_btn.add_css_class('rw-ghost')
-        self.settings_btn.set_tooltip_text('Ajustes (Ctrl+,)')
-        ui.a11y(self.settings_btn, 'Ajustes')
+        self.settings_btn.set_tooltip_text(_('Ajustes (Ctrl+,)'))
+        ui.a11y(self.settings_btn, _('Ajustes'))
         self.settings_btn.connect('clicked', lambda *_: self.open_settings())
         header.pack_end(self.settings_btn)
 
         menu = Gio.Menu()
-        menu.append('Tomar instantánea', 'app.take-snapshot')
-        menu.append('Restaurar…', 'app.restore')
-        menu.append('Restaurar en otra ubicación…', 'app.restore-to')
+        menu.append(_('Tomar instantánea'), 'app.take-snapshot')
+        menu.append(_('Restaurar…'), 'app.restore')
+        menu.append(_('Restaurar en otra ubicación…'), 'app.restore-to')
         section = Gio.Menu()
-        section.append('Registro de la instantánea', 'app.log-view')
-        section.append('Comparar con la anterior', 'app.diff')
-        section.append('Eliminar esta instantánea', 'app.delete-snapshot')
-        section.append('Revisar retención', 'app.retention')
+        section.append(_('Registro de la instantánea'), 'app.log-view')
+        section.append(_('Comparar con la anterior'), 'app.diff')
+        section.append(_('Eliminar esta instantánea'), 'app.delete-snapshot')
+        section.append(_('Revisar retención'), 'app.retention')
         menu.append_section(None, section)
         section2 = Gio.Menu()
-        section2.append('Asistente de configuración', 'app.first-run')
-        section2.append('Gestionar perfiles', 'app.advanced-preferences')
-        section2.append('Atajos de teclado', 'app.shortcuts')
-        section2.append('Acerca de Back In Time', 'app.about')
+        section2.append(_('Asistente de configuración'), 'app.first-run')
+        section2.append(_('Gestionar perfiles'), 'app.advanced-preferences')
+        section2.append(_('Atajos de teclado'), 'app.shortcuts')
+        section2.append(_('Acerca de Back In Time'), 'app.about')
         menu.append_section(None, section2)
 
         self.menu = menu
         menu_btn = Gtk.MenuButton(icon_name='open-menu-symbolic',
                                   menu_model=menu)
         menu_btn.add_css_class('rw-ghost')
-        menu_btn.set_tooltip_text('Menú principal')
-        ui.a11y(menu_btn, 'Menú principal')
+        menu_btn.set_tooltip_text(_('Menú principal'))
+        ui.a11y(menu_btn, _('Menú principal'))
         header.pack_end(menu_btn)
         return header
 
@@ -328,10 +331,10 @@ class MainWindow(Adw.ApplicationWindow):
         self.cron_label.set_hexpand(True)
         icon = Gtk.Image(icon_name='dialog-warning-symbolic')
         icon.add_css_class('rw-cron-icon')
-        button = Gtk.Button(label='Cómo arreglarlo')
+        button = Gtk.Button(label=_('Cómo arreglarlo'))
         button.add_css_class('rw-soft')
         button.connect('clicked', lambda *_: self._explain_cron())
-        ui.a11y(button, 'Cómo arreglar las copias automáticas')
+        ui.a11y(button, _('Cómo arreglar las copias automáticas'))
         box = Gtk.Box(spacing=10)
         box.add_css_class('rw-cron-banner')
         box.append(icon)
@@ -366,9 +369,9 @@ class MainWindow(Adw.ApplicationWindow):
         if not text:
             return
         dialog = Adw.MessageDialog(
-            transient_for=self, heading='Copias automáticas', body=text)
+            transient_for=self, heading=_('Copias automáticas'), body=text)
         dialog.add_css_class('rw-dialog')
-        dialog.add_response('close', 'Cerrar')
+        dialog.add_response('close', _('Cerrar'))
         dialog.set_default_response('close')
         dialog.present()
         self._cron_dialog = dialog
@@ -434,9 +437,10 @@ class MainWindow(Adw.ApplicationWindow):
         section.set_valign(Gtk.Align.CENTER)
         section.set_margin_top(18)
         section.set_margin_bottom(10)
-        self.section_title = Gtk.Label(label='Tus carpetas protegidas', xalign=0)
+        self.section_title = Gtk.Label(label=_('Tus carpetas protegidas'),
+                                       xalign=0)
         self.section_title.add_css_class('rw-section-title')
-        self.section_hint = Gtk.Label(label='Doble clic para entrar',
+        self.section_hint = Gtk.Label(label=_('Doble clic para entrar'),
                                       xalign=0)
         self.section_hint.add_css_class('rw-hint')
         grow = Gtk.Box()
@@ -449,12 +453,12 @@ class MainWindow(Adw.ApplicationWindow):
         toggle.add_css_class('rw-seg')
         self.grid_btn = Gtk.ToggleButton(icon_name='view-grid-symbolic')
         self.grid_btn.set_active(True)
-        self.grid_btn.set_tooltip_text('Cuadrícula')
-        ui.a11y(self.grid_btn, 'Vista de cuadrícula')
+        self.grid_btn.set_tooltip_text(_('Cuadrícula'))
+        ui.a11y(self.grid_btn, _('Vista de cuadrícula'))
         self.grid_btn.connect('toggled', self._on_view_toggled, 'grid')
         self.list_btn = Gtk.ToggleButton(icon_name='view-list-symbolic')
-        self.list_btn.set_tooltip_text('Lista')
-        ui.a11y(self.list_btn, 'Vista de lista')
+        self.list_btn.set_tooltip_text(_('Lista'))
+        ui.a11y(self.list_btn, _('Vista de lista'))
         self.list_btn.connect('toggled', self._on_view_toggled, 'list')
         self.list_btn.set_group(self.grid_btn)
         toggle.append(self.grid_btn)
@@ -495,9 +499,9 @@ class MainWindow(Adw.ApplicationWindow):
         empty = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         empty.add_css_class('rw-empty')
         empty.set_halign(Gtk.Align.CENTER)
-        self.empty_title = Gtk.Label(label='Nada por aquí')
+        self.empty_title = Gtk.Label(label=_('Nada por aquí'))
         self.empty_title.add_css_class('rw-empty-title')
-        self.empty_hint = Gtk.Label(label='Carpeta vacía en este momento')
+        self.empty_hint = Gtk.Label(label=_('Carpeta vacía en este momento'))
         empty.append(self.empty_title)
         empty.append(self.empty_hint)
         self.stack.add_named(empty, 'empty')
@@ -509,15 +513,16 @@ class MainWindow(Adw.ApplicationWindow):
         top = Gtk.Box(spacing=12)
         self.play_btn = Gtk.Button(icon_name='media-playback-start-symbolic')
         self.play_btn.add_css_class('rw-play')
-        self.play_btn.set_tooltip_text('Reproducir el paso del tiempo')
-        ui.a11y(self.play_btn, 'Reproducir el paso del tiempo')
+        self.play_btn.set_tooltip_text(_('Reproducir el paso del tiempo'))
+        ui.a11y(self.play_btn, _('Reproducir el paso del tiempo'))
         self.play_btn.connect('clicked', lambda *_: self.toggle_play())
         top.append(self.play_btn)
 
         labels = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        self.tl_label = Gtk.Label(label='Ahora', xalign=0)
+        self.tl_label = Gtk.Label(label=_('Ahora'), xalign=0)
         self.tl_label.add_css_class('rw-tl-label')
-        self.tl_sub = Gtk.Label(label='Estado actual de tus archivos', xalign=0)
+        self.tl_sub = Gtk.Label(label=_('Estado actual de tus archivos'),
+                                xalign=0)
         self.tl_sub.add_css_class('rw-tl-sub')
         labels.append(self.tl_label)
         labels.append(self.tl_sub)
@@ -527,7 +532,7 @@ class MainWindow(Adw.ApplicationWindow):
         grow.set_hexpand(True)
         top.append(grow)
 
-        self.present_btn = Gtk.Button(label='Volver al presente')
+        self.present_btn = Gtk.Button(label=_('Volver al presente'))
         self.present_btn.add_css_class('rw-soft')
         self.present_btn.connect('clicked', lambda *_: self.set_snapshot(None))
         self.present_btn.set_visible(False)
@@ -549,17 +554,17 @@ class MainWindow(Adw.ApplicationWindow):
         self.actionbar_name.add_css_class('rw-actionbar-name')
         bar.append(self.actionbar_name)
 
-        self.restore_btn = Gtk.Button(label='Restaurar')
+        self.restore_btn = Gtk.Button(label=_('Restaurar'))
         self.restore_btn.add_css_class('rw-primary')
         self.restore_btn.connect('clicked', lambda *_: self.restore_selection())
         bar.append(self.restore_btn)
 
-        changes = Gtk.Button(label='Ver cambios')
+        changes = Gtk.Button(label=_('Ver cambios'))
         changes.add_css_class('rw-soft')
         changes.connect('clicked', lambda *_: self.show_diff())
         bar.append(changes)
 
-        forget = Gtk.Button(label='Dejar de copiar')
+        forget = Gtk.Button(label=_('Dejar de copiar'))
         forget.add_css_class('rw-soft')
         forget.connect('clicked', lambda *_: self.forget_selection())
         bar.append(forget)
@@ -627,7 +632,8 @@ class MainWindow(Adw.ApplicationWindow):
         def done(result, error):
             ok, message = result if result else (False, str(error))
             if not ok:
-                self.toast(f'No se pudo montar el destino: {message}')
+                self.toast(_('No se pudo montar el destino: {message}')
+                           .format(message=message))
             self.reload_snapshots()
             self._schedule_retention()
             Worker(self.backend.apply_automation, self._automation_done)
@@ -648,7 +654,8 @@ class MainWindow(Adw.ApplicationWindow):
         try:
             self.backend.set_profile_password(password)
         except Exception as exc:          # noqa: BLE001
-            self.toast(f'No se pudo guardar la contraseña: {exc}')
+            self.toast(_('No se pudo guardar la contraseña: {error}')
+                       .format(error=exc))
             return
         self._prepare_profile()
 
@@ -657,9 +664,10 @@ class MainWindow(Adw.ApplicationWindow):
         if error:
             reason = AUTOMATION_ERRORS.get(
                 str(self.backend.last_automation_error), str(error))
-            self.toast(f'No se pudo programar la copia: {reason}')
+            self.toast(_('No se pudo programar la copia: {reason}')
+                       .format(reason=reason))
         elif created is False:
-            self.toast('No se pudo programar la copia automática')
+            self.toast(_('No se pudo programar la copia automática'))
         return False
 
     def _maybe_wizard(self):
@@ -680,8 +688,8 @@ class MainWindow(Adw.ApplicationWindow):
     def open_wizard(self):
         if self._snap_worker_running or self.backend.busy_backup \
                 or self._busy_ops:
-            self.toast('Espera a que termine la operación para abrir el '
-                       'asistente')
+            self.toast(_('Espera a que termine la operación para abrir '
+                         'el asistente'))
             return None
         existing = getattr(self, '_wizard', None)
         if existing is not None and existing.get_visible():
@@ -713,14 +721,15 @@ class MainWindow(Adw.ApplicationWindow):
         """
         if self._snap_worker_running or self.backend.busy_backup \
                 or self._busy_ops:
-            return 'Espera a que termine la operación en curso'
+            return _('Espera a que termine la operación en curso')
         return None
 
     def _busy_guard(self, what):
         """True when another operation is running, with a toast for it."""
         reason = self.busy_reason()
         if reason:
-            self.toast(f'{reason} para {what}')
+            self.toast(_('{reason} para {what}').format(
+                reason=reason, what=what))
             return True
         return False
 
@@ -735,8 +744,8 @@ class MainWindow(Adw.ApplicationWindow):
             self.render_files()
             return
         if self.busy_reason():
-            self.toast('Espera a que termine la operación para cambiar de '
-                       'perfil o destino')
+            self.toast(_('Espera a que termine la operación para cambiar '
+                         'de perfil o destino'))
             return
         self._stop_play()
         self.index = None
@@ -899,12 +908,14 @@ class MainWindow(Adw.ApplicationWindow):
         while child := self.grid.get_first_child():
             self.grid.remove(child)
         if not results:
-            self._show_empty('Sin resultados',
-                             f'Nada llamado «{text}» en este punto.')
-            self.section_hint.set_text('Búsqueda en todo el perfil')
+            self._show_empty(
+                _('Sin resultados'),
+                _('Nada llamado «{text}» en este punto.').format(text=text))
+            self.section_hint.set_text(_('Búsqueda en todo el perfil'))
             return
         self.section_hint.set_text(
-            f'Resultados en todo el perfil ({len(results)})')
+            _('Resultados en todo el perfil ({count})').format(
+                count=len(results)))
         self.stack.set_visible_child_name('list')
         for entry in results:
             row = Gtk.ListBoxRow()
@@ -985,25 +996,28 @@ class MainWindow(Adw.ApplicationWindow):
             sid = self._current_sid()
             when = self.backend.snapshot_label(sid) if sid is not None else None
             if isinstance(when, datetime.datetime):
-                self.title_sub.set_text('Viajando en el tiempo')
-                self.section_title.set_text('Así se veían tus carpetas')
-                self.section_hint.set_text('Lo que cambió después lleva etiqueta')
+                self.title_sub.set_text(_('Viajando en el tiempo'))
+                self.section_title.set_text(_('Así se veían tus carpetas'))
+                self.section_hint.set_text(
+                    _('Lo que cambió después lleva etiqueta'))
                 self.date_big.set_text(ui.day_label(when))
                 self.date_rel.set_markup(
-                    f'Así estaba todo <b>{ui.ago_label(when)}</b> '
-                    f'a las {ui.time_label(when)}')
+                    _('Así estaba todo <b>{ago}</b> a las {time}').format(
+                        ago=ui.ago_label(when), time=ui.time_label(when)))
                 self.tl_label.set_text(
-                    f'{ui.day_label(when)} · {ui.time_label(when)}')
+                    _('{day} · {time}').format(
+                        day=ui.day_label(when), time=ui.time_label(when)))
                 self.tl_sub.set_text(
-                    f'punto {self.index + 1} de {len(self.chrono)}')
+                    _('punto {index} de {total}').format(
+                        index=self.index + 1, total=len(self.chrono)))
         else:
-            self.title_sub.set_text('Copias de seguridad')
-            self.section_title.set_text('Tus carpetas protegidas')
-            self.section_hint.set_text('Doble clic para entrar')
-            self.tl_label.set_text('Ahora')
-            self.tl_sub.set_text('Estado actual de tus archivos')
+            self.title_sub.set_text(_('Copias de seguridad'))
+            self.section_title.set_text(_('Tus carpetas protegidas'))
+            self.section_hint.set_text(_('Doble clic para entrar'))
+            self.tl_label.set_text(_('Ahora'))
+            self.tl_sub.set_text(_('Estado actual de tus archivos'))
         if self._snap_worker_running:
-            self.title_sub.set_text('Creando copia…')
+            self.title_sub.set_text(_('Creando copia…'))
         self._update_actionbar()
 
     # ---------------------------------------------------------------- hero
@@ -1033,44 +1047,50 @@ class MainWindow(Adw.ApplicationWindow):
         if problem:
             # An unreachable destination is not "no copies yet": saying that
             # over a disk with years of snapshots on it is a lie.
-            self.hero_title.set_text('No se puede leer el destino')
+            self.hero_title.set_text(_('No se puede leer el destino'))
             self.hero_sub.set_text(problem.splitlines()[0])
             self.ring_check.set_from_icon_name('dialog-warning-symbolic')
             self.ring_state = 'warn'
         elif count == 0:
-            self.hero_title.set_text('Sin copias todavía')
-            self.hero_sub.set_text(
-                'Crea la primera copia para empezar a viajar en el tiempo.')
+            self.hero_title.set_text(_('Sin copias todavía'))
+            self.hero_sub.set_text(_('Crea la primera copia para empezar a '
+                                     'viajar en el tiempo.'))
             self.ring_check.set_from_icon_name('dialog-warning-symbolic')
             self.ring_state = 'warn'
         elif failed:
-            self.hero_title.set_text('Última copia con errores')
+            self.hero_title.set_text(_('Última copia con errores'))
             self.hero_sub.set_text(
-                f'{count} puntos en el tiempo · revisa el registro')
+                _('{count} puntos en el tiempo · revisa el registro').format(
+                    count=count))
             self.ring_check.set_from_icon_name('dialog-warning-symbolic')
             self.ring_state = 'warn'
         else:
-            self.hero_title.set_text('Todo protegido')
-            extra = (f' · {failed_count} con errores' if failed_count else '')
+            self.hero_title.set_text(_('Todo protegido'))
+            extra = (_(' · {count} con errores').format(count=failed_count)
+                     if failed_count else '')
             self.hero_sub.set_text(
-                f'Última copia {self._last_copy_text()} · {self._next_copy_text()}'
-                f'\n{len(includes)} carpetas vigiladas · {count} puntos en '
-                f'el tiempo{extra}')
+                _('Última copia {last} · {next}\n{folders} carpetas vigiladas'
+                  ' · {count} puntos en el tiempo{extra}').format(
+                      last=self._last_copy_text(),
+                      next=self._next_copy_text(), folders=len(includes),
+                      count=count, extra=extra))
             self.ring_check.set_from_icon_name('object-select-symbolic')
             self.ring_state = 'ok'
 
         if free is not None and total:
             pct = int(free * 100 / total) if total else 0
             self.meta_dest.set_markup(
-                f'Destino · <b>{format_size(free)} libres</b> ({pct}%)')
+                _('Destino · <b>{free} libres</b> ({pct}%)').format(
+                    free=format_size(free), pct=pct))
         else:
             dest = self.backend.destination_path()
             if dest:
                 name = os.path.basename(dest.rstrip('/')) or dest
                 self.meta_dest.set_markup(
-                    f'Destino · <b>{GLib.markup_escape_text(name)}</b>')
+                    _('Destino · <b>{name}</b>').format(
+                        name=GLib.markup_escape_text(name)))
             else:
-                self.meta_dest.set_text('Destino · sin configurar')
+                self.meta_dest.set_text(_('Destino · sin configurar'))
         self.meta_ret.set_markup(self._retention_text())
         self.ring_area.queue_draw()
 
@@ -1081,14 +1101,15 @@ class MainWindow(Adw.ApplicationWindow):
         sid = self._last_sid()
         when = self.backend.snapshot_label(sid) if sid is not None else None
         if not isinstance(when, datetime.datetime):
-            return 'sin fecha'
-        return f'{ui.ago_label(when)} a las {ui.time_label(when)}'
+            return _('sin fecha')
+        return _('{ago} a las {time}').format(
+            ago=ui.ago_label(when), time=ui.time_label(when))
 
     def _next_copy_text(self):
         try:
             mode = getattr(self.cfg.scheduleMode(), 'name', '')
         except Exception:  # noqa: BLE001
-            return 'sin programación'
+            return _('sin programación')
         when = None
         if mode == 'DAY':
             try:
@@ -1101,19 +1122,22 @@ class MainWindow(Adw.ApplicationWindow):
         try:
             enabled, value, unit = self.cfg.removeOldSnapshots()
         except Exception:  # noqa: BLE001
-            return 'Retención · <b>sin límite</b>'
+            return _('Retención · <b>sin límite</b>')
         if not enabled:
-            return 'Retención · <b>sin límite</b>'
-        names = {'HOUR': ('hora', 'horas'), 'DAY': ('día', 'días'),
-                 'WEEK': ('semana', 'semanas'), 'MONTH': ('mes', 'meses'),
-                 'YEAR': ('año', 'años')}
+            return _('Retención · <b>sin límite</b>')
+        forms = {
+            'HOUR': ngettext('{n} hora', '{n} horas', value),
+            'DAY': ngettext('{n} día', '{n} días', value),
+            'WEEK': ngettext('{n} semana', '{n} semanas', value),
+            'MONTH': ngettext('{n} mes', '{n} meses', value),
+            'YEAR': ngettext('{n} año', '{n} años', value),
+        }
         unit_name = getattr(unit, 'name', None)
         if unit_name is None:
             unit_name = {10: 'HOUR', 20: 'DAY', 30: 'WEEK', 40: 'MONTH',
                          80: 'YEAR'}.get(unit, 'DAY')
-        singular, plural = names.get(unit_name, ('día', 'días'))
-        label = singular if value == 1 else plural
-        return f'Retención · <b>{value} {label}</b>'
+        label = forms.get(unit_name, forms['DAY']).format(n=value)
+        return _('Retención · <b>{label}</b>').format(label=label)
 
     def _draw_ring(self, area, cr, width, height):
         state = getattr(self, 'ring_state', 'warn')
@@ -1300,7 +1324,7 @@ class MainWindow(Adw.ApplicationWindow):
             btn.connect('clicked', lambda *_: self._crumb_to(rel))
             self.crumbs.append(btn)
 
-        add('Tus carpetas', '', current=not self.rel)
+        add(_('Tus carpetas'), '', current=not self.rel)
         parts = self._crumb_parts()
         for i, (label, rel) in enumerate(parts):
             sep = Gtk.Label(label='›')
@@ -1327,9 +1351,10 @@ class MainWindow(Adw.ApplicationWindow):
         if self.rel:
             base = self._current_dir()
             if not base or not os.path.isdir(base):
-                self._show_empty('Carpeta no disponible',
-                                 'No existe o no hay permisos: '
-                                 f'{self._display_path(self.rel)}')
+                self._show_empty(
+                    _('Carpeta no disponible'),
+                    _('No existe o no hay permisos: {path}').format(
+                        path=self._display_path(self.rel)))
                 return
             entries = self._iter_dir(base)
         else:
@@ -1344,9 +1369,9 @@ class MainWindow(Adw.ApplicationWindow):
         self._schedule_deltas(entries)
 
         if not entries:
-            self._show_empty('Nada por aquí',
-                             'Prueba con otro nombre.' if query
-                             else 'Carpeta vacía en este momento.')
+            self._show_empty(_('Nada por aquí'),
+                             _('Prueba con otro nombre.') if query
+                             else _('Carpeta vacía en este momento.'))
             return
 
         self.stack.set_visible_child_name(self.view)
@@ -1370,9 +1395,9 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _badge(self, name, changed, gone):
         if name in gone:
-            return ('Se borró después', 'rw-badge-gone')
+            return (_('Se borró después'), 'rw-badge-gone')
         if name in changed:
-            return ('Cambió después', 'rw-badge-changed')
+            return (_('Cambió después'), 'rw-badge-changed')
         return None
 
     def _render_grid(self, entries, changed, gone):
@@ -1400,7 +1425,7 @@ class MainWindow(Adw.ApplicationWindow):
             detail = Gtk.Label(xalign=0.5)
             detail.add_css_class('rw-tile-size')
             if is_dir:
-                detail.set_text('carpeta')
+                detail.set_text(_('carpeta'))
             elif entry['size'] is None:
                 detail.set_text('')
             else:
@@ -1512,8 +1537,8 @@ class MainWindow(Adw.ApplicationWindow):
         self.actionbar_name.set_text(name)
         in_time = self._current_sid() is not None
         self.restore_btn.set_sensitive(in_time)
-        self.restore_btn.set_label('Restaurar esta versión' if in_time
-                                   else 'Restaurar')
+        self.restore_btn.set_label(_('Restaurar esta versión') if in_time
+                                   else _('Restaurar'))
         self.actionbar.set_visible(True)
 
     # ------------------------------------------------------------ retention
@@ -1553,20 +1578,23 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _announce_retention(self, result):
         if result.get('engine_inert'):
-            self.toast(f'La retención ({result["label"]}) no se aplica: este '
-                       'núcleo no borra instantáneas', 'Ver detalle',
-                       self._show_retention)
+            self.toast(
+                _('La retención ({label}) no se aplica: este núcleo no borra '
+                  'instantáneas').format(label=result['label']),
+                _('Ver detalle'), self._show_retention)
             return
         if not result.get('complete', True):
             self.toast(
-                f'{len(result["doomed"])} instantáneas fuera de retención; '
-                'no se pudo analizar todo el contenido', 'Ver detalle',
-                self._show_retention)
+                _('{count} instantáneas fuera de retención; no se pudo '
+                  'analizar todo el contenido').format(
+                      count=len(result['doomed'])),
+                _('Ver detalle'), self._show_retention)
             return
         self.toast(
-            f'{len(result["doomed"])} instantáneas fuera de retención: '
-            f'{len(result["lost"])} archivos solo existen ahí', 'Ver detalle',
-            self._show_retention)
+            _('{count} instantáneas fuera de retención: {lost} archivos solo '
+              'existen ahí').format(count=len(result['doomed']),
+                                    lost=len(result['lost'])),
+            _('Ver detalle'), self._show_retention)
 
     def review_retention(self):
         if self._retention_result is not None:
@@ -1574,7 +1602,7 @@ class MainWindow(Adw.ApplicationWindow):
             return
         sids = list(self.sids)
         if not sids or self.cfg is None:
-            self.toast('Todavía no hay instantáneas')
+            self.toast(_('Todavía no hay instantáneas'))
             return
         self._retention_token += 1
         token = self._retention_token
@@ -1587,7 +1615,7 @@ class MainWindow(Adw.ApplicationWindow):
             if token != self._retention_token:
                 return False
             if error or result is None:
-                self.toast('No hay instantáneas fuera de retención')
+                self.toast(_('No hay instantáneas fuera de retención'))
                 return False
             self._retention_result = result
             self._show_retention()
@@ -1598,7 +1626,7 @@ class MainWindow(Adw.ApplicationWindow):
     def _show_retention(self):
         result = self._retention_result
         if result is None:
-            self.toast('No hay instantáneas fuera de retención')
+            self.toast(_('No hay instantáneas fuera de retención'))
             return
         from bitgnome.dialogs import RetentionDialog
         dialog = RetentionDialog(self, result, on_settings=self.open_settings)
@@ -1607,23 +1635,23 @@ class MainWindow(Adw.ApplicationWindow):
     # -------------------------------------------------------------- actions
     def take_snapshot(self):
         if self._snap_worker_running or self.backend.busy_backup:
-            self.toast('Ya hay una instantánea en curso')
+            self.toast(_('Ya hay una instantánea en curso'))
             return
-        if self._busy_guard('crear una copia'):
+        if self._busy_guard(_('crear una copia')):
             return
         if self.backend.error:
-            self.toast('Núcleo no disponible')
+            self.toast(_('Núcleo no disponible'))
             return
         self._snap_worker_running = True
         self.backend.busy_backup = True
         self.backend.busy_owner = 'window'
         self._snapshots_before_take = len(self.chrono)
         self.snap_btn.set_sensitive(False)
-        self.snap_btn.set_label('Copiando…')
-        self.title_sub.set_text('Creando copia…')
+        self.snap_btn.set_label(_('Copiando…'))
+        self.title_sub.set_text(_('Creando copia…'))
 
         dialog = Adw.Window(transient_for=self, modal=False,
-                            title='Tomando instantánea',
+                            title=_('Tomando instantánea'),
                             default_width=440, resizable=False)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         box.set_margin_top(24)
@@ -1633,15 +1661,15 @@ class MainWindow(Adw.ApplicationWindow):
         spinner = Gtk.Spinner(spinning=True, width_request=32,
                               height_request=32, halign=Gtk.Align.CENTER)
         box.append(spinner)
-        stage = Gtk.Label(label='Iniciando rsync…')
+        stage = Gtk.Label(label=_('Iniciando rsync…'))
         stage.set_wrap(True)
         stage.set_max_width_chars(52)
         box.append(stage)
 
         buttons = Gtk.Box(spacing=8, halign=Gtk.Align.CENTER)
-        stop_btn = Gtk.Button(label='Parar la copia')
+        stop_btn = Gtk.Button(label=_('Parar la copia'))
         stop_btn.add_css_class('rw-danger')
-        background_btn = Gtk.Button(label='Seguir en segundo plano')
+        background_btn = Gtk.Button(label=_('Seguir en segundo plano'))
         background_btn.add_css_class('rw-soft')
         buttons.append(stop_btn)
         buttons.append(background_btn)
@@ -1667,32 +1695,34 @@ class MainWindow(Adw.ApplicationWindow):
                 GLib.timeout_add(1000, attempt_stop)
             return False
 
-        def stop_clicked(*_):
+        def stop_clicked(*_args):
             if state['stopped']:
                 return
             state['stopped'] = True
-            stage.set_text('Deteniendo la copia…')
+            stage.set_text(_('Deteniendo la copia…'))
             stop_btn.set_sensitive(False)
             background_btn.set_sensitive(False)
             attempt_stop()
             GLib.timeout_add_seconds(6, escalate)
 
-        def to_background(*_):
+        def to_background(*_args):
             state['background'] = True
             dialog.close()
-            self.toast('La copia sigue en segundo plano. Te aviso al terminar')
+            self.toast(_('La copia sigue en segundo plano. Te aviso al '
+                         'terminar'))
 
         state.setdefault('closing', False)
         stop_btn.connect('clicked', stop_clicked)
         background_btn.connect('clicked', to_background)
-        def on_close(*_):
+        def on_close(*_args):
             # closing the window keeps the copy running, like the button.
             # A programmatic close (the copy finished) must not say that.
             if state.get('closing'):
                 return False
             if not state['background']:
                 state['background'] = True
-                self.toast('La copia sigue en segundo plano. Te aviso al terminar')
+                self.toast(_('La copia sigue en segundo plano. Te aviso al '
+                             'terminar'))
             return False
 
         dialog.connect('close-request', on_close)
@@ -1721,7 +1751,7 @@ class MainWindow(Adw.ApplicationWindow):
                 GLib.source_remove(self._snap_poll_source)
                 self._snap_poll_source = None
             self.snap_btn.set_sensitive(True)
-            self.snap_btn.set_label('Crear copia ahora')
+            self.snap_btn.set_label(_('Crear copia ahora'))
             state['closing'] = True
             dialog.close()
             if self._close_dialog is not None:
@@ -1738,19 +1768,22 @@ class MainWindow(Adw.ApplicationWindow):
                         self.backend.delete_snapshot(newest)
                         created = False
                     except Exception as exc:  # noqa: BLE001
-                        self.toast(f'No se pudo descartar la copia parcial: {exc}')
+                        self.toast(
+                            _('No se pudo descartar la copia parcial: {error}')
+                            .format(error=exc))
             if state['stopped'] and not created:
-                self.toast('Copia detenida. No se guardó nada')
+                self.toast(_('Copia detenida. No se guardó nada'))
             elif state['stopped'] and created:
-                self.toast('La copia terminó antes de poder detenerla')
+                self.toast(_('La copia terminó antes de poder detenerla'))
             elif error:
-                self.toast(f'Error en la instantánea: {error}')
+                self.toast(_('Error en la instantánea: {error}').format(
+                    error=error))
             elif error_message:
                 # The backend already writes a full sentence and knows whether
                 # the snapshot exists or not.
                 self.toast(error_message)
             else:
-                self.toast('Punto en el tiempo creado', 'Ver ahora',
+                self.toast(_('Punto en el tiempo creado'), _('Ver ahora'),
                            lambda: self.set_snapshot(None))
             self.reload_snapshots()
             self._schedule_retention(force=True)
@@ -1769,7 +1802,7 @@ class MainWindow(Adw.ApplicationWindow):
                 and not self._snap_worker_running:
             GLib.idle_add(self._close_now)
 
-    def _on_close_request(self, *_):
+    def _on_close_request(self, *_args):
         if self._closing_after_foreign_stop:
             self.backend.release_mount()
             return False
@@ -1784,11 +1817,11 @@ class MainWindow(Adw.ApplicationWindow):
             return True
         dialog = Adw.MessageDialog(
             transient_for=self, modal=True,
-            heading='Hay una copia en curso',
-            body='Si sales ahora, la copia se quedará a medias.')
-        dialog.add_response('cancel', 'Cancelar')
-        dialog.add_response('wait', 'Esperar')
-        dialog.add_response('stop', 'Detener y salir')
+            heading=_('Hay una copia en curso'),
+            body=_('Si sales ahora, la copia se quedará a medias.'))
+        dialog.add_response('cancel', _('Cancelar'))
+        dialog.add_response('wait', _('Esperar'))
+        dialog.add_response('stop', _('Detener y salir'))
         dialog.set_response_appearance('stop',
                                        Adw.ResponseAppearance.DESTRUCTIVE)
         dialog.set_default_response('wait')
@@ -1805,11 +1838,11 @@ class MainWindow(Adw.ApplicationWindow):
             return True
         dialog = Adw.MessageDialog(
             transient_for=self, modal=True,
-            heading='Hay una copia en curso',
-            body='La está ejecutando el asistente. Si sales ahora se quedará '
-                 'a medias.')
-        dialog.add_response('cancel', 'Cancelar')
-        dialog.add_response('stop', 'Detener y salir')
+            heading=_('Hay una copia en curso'),
+            body=_('La está ejecutando el asistente. Si sales ahora se '
+                   'quedará a medias.'))
+        dialog.add_response('cancel', _('Cancelar'))
+        dialog.add_response('stop', _('Detener y salir'))
         dialog.set_response_appearance('stop',
                                        Adw.ResponseAppearance.DESTRUCTIVE)
         dialog.set_close_response('cancel')
@@ -1820,7 +1853,7 @@ class MainWindow(Adw.ApplicationWindow):
             if response != 'stop':
                 return
             self.backend.stop_snapshot()
-            self.toast('Deteniendo la copia y saliendo…')
+            self.toast(_('Deteniendo la copia y saliendo…'))
             self._wait_foreign_and_close()
 
         dialog.connect('response', on_response)
@@ -1833,12 +1866,12 @@ class MainWindow(Adw.ApplicationWindow):
             return True
         dialog = Adw.MessageDialog(
             transient_for=self, modal=True,
-            heading='Hay una operación en curso',
-            body=f'Se está ejecutando una {self._busy_label}. Si sales ahora '
-                 'se quedará a medias.')
-        dialog.add_response('cancel', 'Cancelar')
-        dialog.add_response('wait', 'Esperar')
-        dialog.add_response('stop', 'Detener y salir')
+            heading=_('Hay una operación en curso'),
+            body=_('Se está ejecutando una {operation}. Si sales ahora '
+                   'se quedará a medias.').format(operation=self._busy_label))
+        dialog.add_response('cancel', _('Cancelar'))
+        dialog.add_response('wait', _('Esperar'))
+        dialog.add_response('stop', _('Detener y salir'))
         dialog.set_response_appearance('stop',
                                        Adw.ResponseAppearance.DESTRUCTIVE)
         dialog.set_default_response('wait')
@@ -1889,8 +1922,8 @@ class MainWindow(Adw.ApplicationWindow):
         if response == 'stop' and self._request_stop is not None:
             self._request_stop()
         self._quit_when_done = True
-        self.toast('Se cerrará al terminar la copia' if response == 'wait'
-                   else 'Deteniendo la copia y saliendo…')
+        self.toast(_('Se cerrará al terminar la copia') if response == 'wait'
+                   else _('Deteniendo la copia y saliendo…'))
         if not self._snap_worker_running:
             GLib.idle_add(self._close_now)
 
@@ -1903,14 +1936,14 @@ class MainWindow(Adw.ApplicationWindow):
         return False
 
     def restore_selection(self, other_location=False):
-        if self._busy_guard('restaurar'):
+        if self._busy_guard(_('restaurar')):
             return
         sid = self._current_sid()
         if sid is None:
-            self.toast('Viaja a un punto en el tiempo para restaurar')
+            self.toast(_('Viaja a un punto en el tiempo para restaurar'))
             return
         if not self.selected:
-            self.toast('Selecciona un archivo o carpeta')
+            self.toast(_('Selecciona un archivo o carpeta'))
             return
         # BiT restores from absolute paths in both 1.6.x and 2.0
         rel = '/' + self.selected['rel']
@@ -1921,8 +1954,8 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _on_restore_confirmed(self, sid, rel, restore_to, delete, backup,
                               only_new):
-        self.toast('Restauración iniciada…')
-        self._op_started('restauración')
+        self.toast(_('Restauración iniciada…'))
+        self._op_started(_('restauración'))
 
         def work():
             self.backend.restore(sid, rel, restore_to=restore_to,
@@ -1932,9 +1965,10 @@ class MainWindow(Adw.ApplicationWindow):
         def done(_result, error):
             self._op_finished()
             if error:
-                self.toast(f'Error al restaurar: {error}')
+                self.toast(_('Error al restaurar: {error}').format(
+                    error=error))
             else:
-                self.toast('Restaurado', 'Ver registro', self.show_log)
+                self.toast(_('Restaurado'), _('Ver registro'), self.show_log)
 
         Worker(work, done)
 
@@ -1951,13 +1985,15 @@ class MainWindow(Adw.ApplicationWindow):
                 self.cfg.setInclude(new)
                 if not ui.save(self.cfg):
                     self.cfg.setInclude(old)
-                    self.toast('No se pudo guardar el cambio')
+                    self.toast(_('No se pudo guardar el cambio'))
                     return
             except Exception as exc:  # noqa: BLE001
                 self.cfg.setInclude(old)
-                self.toast(f'No se pudo quitar la carpeta: {exc}')
+                self.toast(_('No se pudo quitar la carpeta: {error}')
+                           .format(error=exc))
                 return
-            self.toast(f'«{name}» ya no se copiará', 'Deshacer',
+            self.toast(_('«{name}» ya no se copiará').format(name=name),
+                       _('Deshacer'),
                        lambda: self._undo_remove_include(old))
             self.reload_snapshots()
             return
@@ -1966,29 +2002,29 @@ class MainWindow(Adw.ApplicationWindow):
         except Exception:  # noqa: BLE001
             patterns = []
         if absolute in patterns:
-            self.toast(f'«{name}» ya estaba excluido')
+            self.toast(_('«{name}» ya estaba excluido').format(name=name))
             return
         patterns.append(absolute)
         try:
             self.cfg.setExclude(patterns)
             if not ui.save(self.cfg):
                 self.cfg.setExclude(patterns[:-1])
-                self.toast('No se pudo guardar la exclusión')
+                self.toast(_('No se pudo guardar la exclusión'))
                 return
         except Exception as exc:  # noqa: BLE001
-            self.toast(f'No se pudo excluir: {exc}')
+            self.toast(_('No se pudo excluir: {error}').format(error=exc))
             return
-        self.toast(f'«{name}» dejará de copiarse', 'Deshacer',
-                   lambda: self._undo_exclude(absolute))
+        self.toast(_('«{name}» dejará de copiarse').format(name=name),
+                   _('Deshacer'), lambda: self._undo_exclude(absolute))
 
     def _undo_remove_include(self, entries):
         try:
             self.cfg.setInclude(entries)
             if ui.save(self.cfg):
-                self.toast('Vuelve a estar protegida')
+                self.toast(_('Vuelve a estar protegida'))
                 self.reload_snapshots()
             else:
-                self.toast('No se pudo guardar el cambio')
+                self.toast(_('No se pudo guardar el cambio'))
         except Exception:  # noqa: BLE001
             pass
 
@@ -1997,30 +2033,30 @@ class MainWindow(Adw.ApplicationWindow):
             patterns = [p for p in self.cfg.exclude() if p != absolute]
             self.cfg.setExclude(patterns)
             if ui.save(self.cfg):
-                self.toast('Sigue protegido')
+                self.toast(_('Sigue protegido'))
             else:
                 self.cfg.setExclude(patterns + [absolute])
-                self.toast('No se pudo guardar el cambio')
+                self.toast(_('No se pudo guardar el cambio'))
         except Exception:  # noqa: BLE001
             pass
 
     def delete_current_snapshot(self):
-        if self._busy_guard('borrar una instantánea'):
+        if self._busy_guard(_('borrar una instantánea')):
             return
         sid = self._current_sid()
         if sid is None:
-            self.toast('Elige un punto en el tiempo primero')
+            self.toast(_('Elige un punto en el tiempo primero'))
             return
         when = self.backend.snapshot_label(sid)
         label = ui.short_label(when) if isinstance(when, datetime.datetime) \
             else str(sid)
         dialog = Adw.MessageDialog(
             transient_for=self, modal=True,
-            heading='¿Eliminar este punto en el tiempo?',
-            body=f'Se eliminará permanentemente la instantánea del {label}. '
-                 'Esta acción no se puede deshacer.')
-        dialog.add_response('cancel', 'Cancelar')
-        dialog.add_response('delete', 'Eliminar')
+            heading=_('¿Eliminar este punto en el tiempo?'),
+            body=_('Se eliminará permanentemente la instantánea del {label}. '
+                   'Esta acción no se puede deshacer.').format(label=label))
+        dialog.add_response('cancel', _('Cancelar'))
+        dialog.add_response('delete', _('Eliminar'))
         dialog.set_response_appearance('delete',
                                        Adw.ResponseAppearance.DESTRUCTIVE)
         dialog.connect('response', self._on_delete_response, sid)
@@ -2030,16 +2066,17 @@ class MainWindow(Adw.ApplicationWindow):
         if response != 'delete':
             return
 
-        self._op_started('eliminación')
+        self._op_started(_('eliminación'))
         def work():
             self.backend.delete_snapshot(sid)
 
         def done(_result, error):
             self._op_finished()
             if error:
-                self.toast(f'Error al eliminar: {error}')
+                self.toast(_('Error al eliminar: {error}').format(
+                    error=error))
                 return
-            self.toast('Punto en el tiempo eliminado')
+            self.toast(_('Punto en el tiempo eliminado'))
             self.index = None
             self.reload_snapshots()
             self._schedule_retention(force=True)
@@ -2053,14 +2090,16 @@ class MainWindow(Adw.ApplicationWindow):
     def show_diff(self, rel=None):
         sid = self._current_sid()
         if sid is None:
-            self.toast('«Ahora» no tiene con qué comparar: elige un punto')
+            self.toast(_('«Ahora» no tiene con qué comparar: elige un '
+                         'punto'))
             return
         if rel is None:
             if not self.selected:
-                self.toast('Selecciona un archivo para comparar')
+                self.toast(_('Selecciona un archivo para comparar'))
                 return
             if self.selected['is_dir']:
-                self.toast('La comparación funciona con archivos, no carpetas')
+                self.toast(_('La comparación funciona con archivos, no '
+                             'carpetas'))
                 return
             rel = self.selected['rel']
         older = self.chrono[self.index - 1] if self.index else None
@@ -2090,7 +2129,8 @@ class MainWindow(Adw.ApplicationWindow):
             self.set_snapshot(self.index + 1, stop_play=False)
         except Exception as exc:  # noqa: BLE001
             self._stop_play()
-            self.toast(f'No se pudo reproducir el historial: {exc}')
+            self.toast(_('No se pudo reproducir el historial: {error}')
+                       .format(error=exc))
             return False
         return True
 
@@ -2106,10 +2146,11 @@ class MainWindow(Adw.ApplicationWindow):
         while child := self.content.get_first_child():
             self.content.remove(child)
         page = Adw.StatusPage(
-            title='Núcleo de Back In Time no disponible',
-            description=(f'{error}\n\nInstala el paquete backintime (o '
-                         'backintime-common) o define BACKINTIME_COMMON '
-                         'apuntando a la carpeta common/ del código fuente.'),
+            title=_('Núcleo de Back In Time no disponible'),
+            description=_('{error}\n\nInstala el paquete backintime (o '
+                          'backintime-common) o define BACKINTIME_COMMON '
+                          'apuntando a la carpeta common/ del código '
+                          'fuente.').format(error=error),
             icon_name='dialog-warning-symbolic', vexpand=True)
         self.content.append(page)
         self.hero.set_visible(False)

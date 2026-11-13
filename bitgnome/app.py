@@ -9,6 +9,7 @@ from gi.repository import Adw, Gio, Gtk  # noqa: E402
 
 from bitgnome import APP_ID, __version__  # noqa: E402
 from bitgnome.backend import Backend  # noqa: E402
+from bitgnome.i18n import _  # noqa: E402
 
 
 class BackInTimeApp(Adw.Application):
@@ -85,7 +86,7 @@ class BackInTimeApp(Adw.Application):
         from bitgnome.prefs import PreferencesWindow
         PreferencesWindow(self).present()
 
-    def _about(self, *_):
+    def _about(self, *_args):
         from bitgnome.ui import has_icon
         icon = 'rewind' if has_icon('rewind') else 'document-revert-symbolic'
         dialog = Adw.AboutWindow(
@@ -93,16 +94,18 @@ class BackInTimeApp(Adw.Application):
             application_name='Rewind',
             application_icon=icon,
             version=__version__,
-            developer_name='Equipo de Back In Time · front GNOME',
+            developer_name=_('Equipo de Back In Time · front GNOME'),
             license_type=Gtk.License.GPL_2_0,
             website='https://github.com/bit-team/backintime',
             issue_url='https://github.com/bit-team/backintime/issues',
-            comments='Interfaz GTK4 + libadwaita sobre el núcleo de Back In Time.',
+            comments=_('Interfaz GTK4 + libadwaita sobre el núcleo de Back In Time.'),
         )
         dialog.present()
 
-    def _shortcuts(self, *_):
+    def _shortcuts(self, *_args):
         builder = Gtk.Builder()
+        # The window is built from XML, so every title goes through gettext
+        # before it reaches the builder.
         builder.add_from_string('''
 <interface>
   <object class="GtkShortcutsWindow" id="win">
@@ -111,33 +114,33 @@ class BackInTimeApp(Adw.Application):
       <object class="GtkShortcutsSection">
         <child>
           <object class="GtkShortcutsGroup">
-            <property name="title">General</property>
+            <property name="title">{general}</property>
             <child><object class="GtkShortcutsShortcut">
-              <property name="title">Tomar instantánea</property>
+              <property name="title">{snapshot}</property>
               <property name="accelerator">&lt;Control&gt;s</property>
             </object></child>
             <child><object class="GtkShortcutsShortcut">
-              <property name="title">Restaurar</property>
+              <property name="title">{restore}</property>
               <property name="accelerator">&lt;Control&gt;r</property>
             </object></child>
             <child><object class="GtkShortcutsShortcut">
-              <property name="title">Ajustes</property>
+              <property name="title">{settings}</property>
               <property name="accelerator">&lt;Control&gt;comma</property>
             </object></child>
             <child><object class="GtkShortcutsShortcut">
-              <property name="title">Punto anterior</property>
+              <property name="title">{previous}</property>
               <property name="accelerator">Left</property>
             </object></child>
             <child><object class="GtkShortcutsShortcut">
-              <property name="title">Punto siguiente</property>
+              <property name="title">{next_point}</property>
               <property name="accelerator">Right</property>
             </object></child>
             <child><object class="GtkShortcutsShortcut">
-              <property name="title">Volver al presente</property>
+              <property name="title">{back_to_present}</property>
               <property name="accelerator">Escape</property>
             </object></child>
             <child><object class="GtkShortcutsShortcut">
-              <property name="title">Salir</property>
+              <property name="title">{quit}</property>
               <property name="accelerator">&lt;Control&gt;q</property>
             </object></child>
           </object>
@@ -145,7 +148,14 @@ class BackInTimeApp(Adw.Application):
       </object>
     </child>
   </object>
-</interface>''')
+</interface>'''.format(general=_('General'),
+                       snapshot=_('Tomar instantánea'),
+                       restore=_('Restaurar'),
+                       settings=_('Ajustes'),
+                       previous=_('Punto anterior'),
+                       next_point=_('Punto siguiente'),
+                       back_to_present=_('Volver al presente'),
+                       quit=_('Salir')))
         win = builder.get_object('win')
         win.set_transient_for(self.get_active_window())
         win.present()

@@ -7,6 +7,9 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Adw, Gdk, Gtk, Pango  # noqa: E402
 
+from bitgnome.i18n import _, ngettext  # noqa: E402
+
+
 def has_icon(name):
     """Whether the icon theme knows ``name`` (the app artwork may be absent)."""
     try:
@@ -30,9 +33,11 @@ def a11y(widget, label):
         pass
 
 
-MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
-          'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
-DAYS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+MONTHS = [_('enero'), _('febrero'), _('marzo'), _('abril'), _('mayo'),
+          _('junio'), _('julio'), _('agosto'), _('septiembre'), _('octubre'),
+          _('noviembre'), _('diciembre')]
+DAYS = [_('lunes'), _('martes'), _('miércoles'), _('jueves'), _('viernes'),
+        _('sábado'), _('domingo')]
 
 
 def save(cfg):
@@ -45,12 +50,16 @@ def save(cfg):
 
 def day_label(when):
     """'martes 4 de noviembre'."""
-    return f'{DAYS[when.weekday()]} {when.day} de {MONTHS[when.month - 1]}'
+    return _('{day} {number} de {month}').format(
+        day=DAYS[when.weekday()], number=when.day,
+        month=MONTHS[when.month - 1])
 
 
 def short_label(when):
     """'4 nov, 09:00'."""
-    return f'{when.day} {MONTHS[when.month - 1][:3]}, {when:%H:%M}'
+    return _('{number} {month}, {time}').format(
+        number=when.day, month=MONTHS[when.month - 1][:3],
+        time=f'{when:%H:%M}')
 
 
 def time_label(when):
@@ -61,20 +70,24 @@ def ago_label(when):
     today = datetime.date.today()
     days = (today - when.date()).days
     if days <= 0:
-        when_time = 'hoy'
+        when_time = _('hoy')
     elif days == 1:
-        when_time = 'ayer'
+        when_time = _('ayer')
     elif days < 7:
-        when_time = f'hace {days} días'
+        when_time = ngettext('hace {n} día', 'hace {n} días',
+                             days).format(n=days)
     elif days < 30:
         weeks = days // 7
-        when_time = f'hace {weeks} semana' + ('' if weeks == 1 else 's')
+        when_time = ngettext('hace {n} semana', 'hace {n} semanas',
+                             weeks).format(n=weeks)
     elif days < 365:
         months = days // 30
-        when_time = f'hace {months} mes' + ('' if months == 1 else 'es')
+        when_time = ngettext('hace {n} mes', 'hace {n} meses',
+                             months).format(n=months)
     else:
         years = days // 365
-        when_time = f'hace {years} año' + ('' if years == 1 else 's')
+        when_time = ngettext('hace {n} año', 'hace {n} años',
+                             years).format(n=years)
     return when_time
 
 
@@ -85,8 +98,8 @@ def chip(label, tooltip, on_close):
     text.set_tooltip_text(tooltip or label)
     close = Gtk.Button(icon_name='window-close-symbolic')
     close.add_css_class('rw-chip-close')
-    close.set_tooltip_text('Quitar')
-    a11y(close, f'Quitar {label}')
+    close.set_tooltip_text(_('Quitar'))
+    a11y(close, _('Quitar {label}').format(label=label))
     close.connect('clicked', lambda *_: on_close())
     box.append(text)
     box.append(close)
