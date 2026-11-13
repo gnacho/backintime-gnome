@@ -35,8 +35,9 @@ package() {
 
   for catalogue in po/*.po; do
     lang=$(basename "$catalogue" .po)
+    install -dm755 "$pkgdir/usr/share/locale/$lang/LC_MESSAGES"
     msgfmt --output-file="$pkgdir/usr/share/locale/$lang/LC_MESSAGES/$pkgname.mo" \
-      "po/$catalogue"
+      "$catalogue"
   done
 
   python -m compileall -q -d "/usr/lib/$pkgname" "$pkgdir/usr/lib/$pkgname"
