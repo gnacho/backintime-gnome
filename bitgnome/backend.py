@@ -927,10 +927,39 @@ class Backend:
                     logger.debug(f'Could not remount after the copy: {error}')
         if not ret_error:
             return None
-        if msg and len(msg) > 1 and msg[1]:
-            return msg[1]
-        tail = list(self.snapshot_log())[-1:]
-        return tail[0].strip() if tail else 'La copia falló sin mensaje del motor'
+        reason = self.engine_message(msg)
+        after = [sid.path() for sid in self.list_snapshots()]
+        created = bool(after) and (not before or after[0] != before[0])
+        if created:
+            # rsync can finish fine and the core still fail afterwards
+            # (retention, free space). Saying "the snapshot failed" there is
+            # wrong: the copy exists.
+            detail = f': {reason}' if reason else ''
+            return f'La copia se creó, pero el motor falló al terminar{detail}'
+        return f'La copia falló{": " + reason if reason else ""}'
+
+    @staticmethod
+    def engine_message(msg):
+        """The useful part of ``takeSnapshotMessage()``, without filler.
+
+        The core returns tuples and lists whose last element is often an
+        informative "please be patient, finishing" line, which used to reach
+        the window as the error text.
+        """
+        def flatten(value):
+            if isinstance(value, (list, tuple)):
+                for item in value:
+                    yield from flatten(item)
+            elif value:
+                yield str(value)
+
+        text = ' '.join(part.strip() for part in flatten(msg)).strip()
+        while text.startswith('[]'):
+            text = text[2:].strip()
+        lowered = text.lower()
+        if not text or lowered.startswith(('por favor', 'finalizando')):
+            return ''
+        return text
 
     @staticmethod
     def descendant_pids(root=None):
