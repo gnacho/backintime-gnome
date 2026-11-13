@@ -33,6 +33,12 @@ SHEET_SIZE = (660, 760)
 # leak a throwaway path. Only the label is affected: no snapshot is taken
 # after this point.
 DEMO_DESTINATION = '/media/backup/Rewind'
+SHOT_NAMES = {
+    'en': {'main': 'main-window', 'time': 'time-travel',
+           'search': 'search', 'settings': 'settings'},
+    'es': {'main': 'ventana-principal', 'time': 'viaje-en-el-tiempo',
+           'search': 'busqueda', 'settings': 'ajustes'},
+}
 
 
 def pump(seconds):
@@ -196,6 +202,8 @@ def main():
     app = Adw.Application(application_id='com.github.bitteam.'
                                          'BackInTimeGNOME.Shots')
     app.backend = backend
+    # The captures must not depend on whether the desktop is in dark mode.
+    Adw.StyleManager.get_default().set_color_scheme(Adw.ColorScheme.FORCE_LIGHT)
     app.register(None)
     window = MainWindow(app)
     window.set_default_size(*SIZE)
@@ -207,11 +215,12 @@ def main():
 
     out = args.out if os.path.isabs(args.out) else os.path.join(root, args.out)
     os.makedirs(out, exist_ok=True)
+    names = SHOT_NAMES.get(args.lang, SHOT_NAMES['en'])
 
     window.index = None
     window._apply_mode()
     pump(1.0)
-    render(window, os.path.join(out, 'main-window.png'), SIZE)
+    render(window, os.path.join(out, names['main'] + '.png'), SIZE)
 
     window.set_snapshot(1)
     window.rel = ''
@@ -223,11 +232,11 @@ def main():
             window._activate(entry)
             break
     pump(1.5)
-    render(window, os.path.join(out, 'time-travel.png'), SIZE)
+    render(window, os.path.join(out, names['time'] + '.png'), SIZE)
 
     window.search.set_text('informe')
     pump(2.0)
-    render(window, os.path.join(out, 'search.png'), SIZE)
+    render(window, os.path.join(out, names['search'] + '.png'), SIZE)
 
     window.search.set_text('')
     window.backend.set_destination_path(DEMO_DESTINATION)
@@ -238,7 +247,7 @@ def main():
         return 1
     sheet.set_default_size(*SHEET_SIZE)
     pump(2.0)
-    render(sheet, os.path.join(out, 'settings.png'), SHEET_SIZE)
+    render(sheet, os.path.join(out, names['settings'] + '.png'), SHEET_SIZE)
 
     sheet.close()
     window._close_now()
