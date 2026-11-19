@@ -1,9 +1,9 @@
 # Maintainer: gnacho <hnacho@proton.me>
 
 pkgname=backintime-gnome
-pkgver=0.3.10
-pkgrel=2
-_commit=5ce7908083f7a9f850a89dd64620664c52ca7205
+pkgver=0.4.0
+pkgrel=1
+_commit=cb01e387c1710112b3efea99841abef4eca1301b
 pkgdesc="Native GNOME (GTK4 + libadwaita) frontend for Back In Time"
 arch=(any)
 url="https://github.com/gnacho/backintime-gnome"
@@ -14,7 +14,7 @@ optdepends=('backintime: udev-based schedules with Back In Time 1.6.x'
 depends=(backintime-cli gtk4 libadwaita python-gobject)
 makedepends=(gettext)
 source=("$pkgname-$pkgver.tar.gz::$url/archive/$_commit.tar.gz")
-sha256sums=('98bd58374c72b749557571fbd3a8a69421f83e05282607455c57f35d7d138bbe')
+sha256sums=('b76565978ede337f13ce36036d2c3ed77ea73326d98f12c604577a615bb7f20a')
 
 package() {
   cd "$pkgname-$_commit"
